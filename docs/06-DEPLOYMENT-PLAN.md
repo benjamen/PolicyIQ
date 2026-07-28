@@ -11,6 +11,17 @@
   no Kubernetes cluster for Phase 1's traffic level; that's premature infrastructure for a beta
   product, revisit if/when scale demands it).
 
+### Live environments
+
+The backend is hosted on **Railway**, connected directly to this GitHub repo ("Deploy from
+GitHub repo") rather than a CI-driven deploy — Railway auto-builds/deploys on every push, no
+tokens or secrets live in this repo for it. Service config: Root Directory `backend`, builder
+Nixpacks, config in `backend/railway.toml` (start command, `/health` healthcheck). Scoped to
+exactly what's implemented today (fixture-backed `POST /api/v1/compare/life` + `/health`) — no
+Postgres/Redis addon yet, since nothing in the current code connects to either.
+
+Backend URL: `<pending — filled in once the first deploy is confirmed>`.
+
 ## Containers
 
 `docker/`: `Dockerfile.backend`, `Dockerfile.worker` (shared base, different entrypoint per
