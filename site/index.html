@@ -361,15 +361,123 @@
 
   .grade-footnote { margin: 18px 2px 0; font-size: 12px; color: var(--text-faint); max-width: 68ch; line-height: 1.6; }
 
+  /* ---- Auth screens (chrome-free, pre-app-shell — see 08-UI-DESIGN.md "States") ---- */
+  .auth-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: var(--paper);
+  }
+  .auth-card { width: 100%; max-width: 380px; padding: 30px 28px; }
+  .auth-title { font-size: 21px; margin-bottom: 4px; }
+  .auth-sub { font-size: 13px; color: var(--text-faint); margin: 0 0 22px; line-height: 1.5; }
+  .auth-form { display: flex; flex-direction: column; gap: 14px; }
+  .auth-submit { width: 100%; height: 40px; margin-top: 4px; }
+  .auth-divider {
+    display: flex; align-items: center; gap: 10px; margin: 18px 0;
+    font-size: 11.5px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .auth-sso { width: 100%; height: 40px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .auth-foot { text-align: center; font-size: 12.5px; color: var(--text-faint); margin: 18px 0 0; }
+  .auth-link { color: var(--teal); font-weight: 600; text-decoration: none; }
+  .auth-callback { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 44px 28px; text-align: center; }
+  .spinner {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2.5px solid var(--slate-soft); border-top-color: var(--teal);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- Rail-foot doubles as nav to Account; sign-out sits alongside ---- */
+  .rail-foot-row { margin-top: auto; display: flex; gap: 6px; }
+  .rail-foot { margin-top: 0; flex: 1; cursor: pointer; background: none; text-align: left; }
+  .rail-foot:hover { border-color: var(--border-strong); }
+  .rail-signout {
+    width: 34px; flex-shrink: 0; border: 1px solid var(--border); border-radius: var(--radius-md);
+    background: none; color: var(--text-faint); cursor: pointer; font-size: 13px;
+  }
+  .rail-signout:hover { color: var(--brick); border-color: var(--brick); }
+
+  /* ---- Loading / error states (see 11-DATA-CONNECTION.md) ---- */
+  .skeleton { background: var(--slate-soft); border-radius: var(--radius-sm); position: relative; overflow: hidden; }
+  .skeleton::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, #ffffff22, transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  .skeleton-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .skeleton-line { height: 12px; border-radius: 4px; }
+  .error-card { padding: 22px 24px; border-color: var(--brick); display: flex; align-items: center; gap: 14px; }
+  .error-card .ic { font-size: 18px; color: var(--brick); }
+  .error-card .msg { flex: 1; font-size: 13px; }
+  .error-card .msg b { display: block; font-size: 13.5px; margin-bottom: 2px; }
+  .demo-state-toggle {
+    display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 16px;
+    background: var(--paper-raised); border: 1px solid var(--border); border-radius: 999px;
+  }
+  .demo-state-toggle button {
+    border: none; background: none; padding: 6px 13px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600; color: var(--text-faint); cursor: pointer;
+  }
+  .demo-state-toggle button.on { background: var(--ink); color: var(--paper); }
+
   @media (prefers-reduced-motion: no-preference) {
     .view.active { animation: fade .15s ease-out; }
     @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; } }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; border-top-color: var(--slate-soft); }
+    .skeleton::after { animation: none; content: none; }
   }
   :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 </style>
 </head>
 <body>
-<div class="shell">
+
+<!-- ================= LOGIN (chrome-free, pre-app-shell) ================= -->
+<section id="screen-login" class="auth-screen">
+  <div class="auth-card card">
+    <div class="brand" style="padding:0 0 22px">
+      <div class="brand-mark serif">P</div>
+      <div>
+        <div class="brand-name">PolicyIQ <span style="color:var(--teal)">NZ</span></div>
+        <div class="brand-tag">Document Intelligence</div>
+      </div>
+    </div>
+    <h1 class="serif auth-title">Sign in</h1>
+    <p class="auth-sub">Citation-verified insurance comparison, for brokers and consumers.</p>
+
+    <form id="login-form" class="auth-form">
+      <label class="field">
+        <span>Work email</span>
+        <input type="email" placeholder="you@company.co.nz" value="j.chen@example.co.nz">
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input type="password" placeholder="••••••••" value="hunter2000000">
+      </label>
+      <button type="submit" class="btn-primary auth-submit">Sign in</button>
+    </form>
+
+    <div class="auth-divider"><span>or</span></div>
+
+    <button id="btn-sso-entra" class="btn-ghost auth-sso" type="button">
+      <span class="ic">⊞</span> Continue with Microsoft
+    </button>
+
+    <p class="auth-foot">No account? <a href="#" class="auth-link">Request access</a></p>
+  </div>
+</section>
+
+<!-- ================= SSO CALLBACK (transition state) ================= -->
+<section id="screen-callback" class="auth-screen" style="display:none">
+  <div class="auth-card card auth-callback">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="auth-sub" style="margin:0">Verifying your session…</p>
+  </div>
+</section>
+
+<div class="shell" id="app-shell" style="display:none">
   <aside class="rail">
     <div class="brand">
       <div class="brand-mark serif">P</div>
@@ -392,12 +500,15 @@
       <button class="nav-item" data-view="admin"><span class="ic">⚙</span> Admin</button>
     </nav>
 
-    <div class="rail-foot">
-      <div class="avatar">JC</div>
-      <div class="rail-foot-text">
-        <div>J. Chen</div>
-        <div class="role">Broker</div>
-      </div>
+    <div class="rail-foot-row">
+      <button class="rail-foot" id="rail-foot-btn" data-view="account" type="button">
+        <div class="avatar">JC</div>
+        <div class="rail-foot-text">
+          <div>J. Chen</div>
+          <div class="role">Broker</div>
+        </div>
+      </button>
+      <button class="rail-signout" id="btn-signout" type="button" title="Sign out" aria-label="Sign out">⏻</button>
     </div>
   </aside>
 
@@ -559,80 +670,127 @@
                 <option>Income Protection</option>
               </select>
             </label>
-            <button class="btn-primary">Grade &amp; compare</button>
+            <button class="btn-primary" id="btn-grade-compare" type="button">Grade &amp; compare</button>
           </div>
         </div>
 
         <div class="section-head">
           <h2>Life Cover — graded for age 38, non-smoker, Professional</h2>
-          <span class="pill neutral">Synthetic fixture data — pending live crawl</span>
+          <span class="pill neutral" id="data-source-pill">Synthetic fixture data — pending live crawl</span>
         </div>
 
-        <div class="grade-board">
-          <div class="card grade-card">
-            <div class="grade-card-head">
-              <div>
-                <div class="grade-insurer">Insurer Alpha</div>
-                <div class="grade-product">Life Cover · v3</div>
-              </div>
-              <div class="grade-overall">
-                <div class="grade-ring good" style="--pct:87"><span>87</span></div>
-                <span class="pill ok">Eligible</span>
-              </div>
-            </div>
-            <div class="criteria-list">
-              <div class="criterion"><span>TPD definition</span><b>Own occupation</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Trauma conditions</span><b>42 covered</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Automatic benefits</span><b>7 benefits</b><i class="crit-bar" style="--w:70%"></i></div>
-            </div>
-          </div>
+        <!-- Demo control: not part of the shipped product — lets this static mockup show the
+             loading/error/loaded states described in 11-DATA-CONNECTION.md without a live backend. -->
+        <div class="demo-state-toggle" role="group" aria-label="Demo: comparison load state">
+          <button class="on" data-demo-state="loaded" type="button">Loaded</button>
+          <button data-demo-state="loading" type="button">Loading</button>
+          <button data-demo-state="error" type="button">Error</button>
+        </div>
 
-          <div class="card grade-card">
-            <div class="grade-card-head">
-              <div>
-                <div class="grade-insurer">Insurer Beta</div>
-                <div class="grade-product">LifeProtect · v5</div>
-              </div>
-              <div class="grade-overall">
-                <div class="grade-ring warn" style="--pct:64"><span>64</span></div>
-                <span class="pill ok">Eligible</span>
-              </div>
-            </div>
-            <div class="criteria-list">
-              <div class="criterion"><span>TPD definition</span><b>Modified own occupation</b><i class="crit-bar" style="--w:70%"></i></div>
-              <div class="criterion"><span>Trauma conditions</span><b>33 covered</b><i class="crit-bar" style="--w:51%"></i></div>
-              <div class="criterion"><span>Occupation restriction</span><b>None for Professional</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Premium structure</span><b>Stepped, reviewable</b><i class="crit-bar" style="--w:40%"></i></div>
-              <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Automatic benefits</span><b>4 benefits</b><i class="crit-bar" style="--w:40%"></i></div>
-            </div>
+        <!-- Loading state -->
+        <div class="grade-board" id="compare-life-loading" style="display:none">
+          <div class="card skeleton-card">
+            <div class="skeleton skeleton-line" style="width:60%;height:16px"></div>
+            <div class="skeleton skeleton-line" style="width:40%"></div>
+            <div class="skeleton skeleton-line" style="width:90%"></div>
+            <div class="skeleton skeleton-line" style="width:75%"></div>
+            <div class="skeleton skeleton-line" style="width:85%"></div>
           </div>
-
-          <div class="card grade-card">
-            <div class="grade-card-head">
-              <div>
-                <div class="grade-insurer">Insurer Gamma</div>
-                <div class="grade-product">Life Shield · v2</div>
-              </div>
-              <div class="grade-overall">
-                <div class="grade-ring warn" style="--pct:65"><span>65</span></div>
-                <span class="pill warn">65% data completeness</span>
-              </div>
-            </div>
-            <div class="criteria-list">
-              <div class="criterion muted"><span>TPD definition</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
-              <div class="criterion muted"><span>Trauma conditions</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
-              <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
-              <div class="criterion muted"><span>Waiver of premium</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
-              <div class="criterion"><span>Automatic benefits</span><b>9 benefits</b><i class="crit-bar" style="--w:90%"></i></div>
-            </div>
+          <div class="card skeleton-card">
+            <div class="skeleton skeleton-line" style="width:55%;height:16px"></div>
+            <div class="skeleton skeleton-line" style="width:35%"></div>
+            <div class="skeleton skeleton-line" style="width:80%"></div>
+            <div class="skeleton skeleton-line" style="width:70%"></div>
+            <div class="skeleton skeleton-line" style="width:90%"></div>
+          </div>
+          <div class="card skeleton-card">
+            <div class="skeleton skeleton-line" style="width:65%;height:16px"></div>
+            <div class="skeleton skeleton-line" style="width:45%"></div>
+            <div class="skeleton skeleton-line" style="width:85%"></div>
+            <div class="skeleton skeleton-line" style="width:60%"></div>
+            <div class="skeleton skeleton-line" style="width:80%"></div>
           </div>
         </div>
-        <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure (see Insurer Gamma).</p>
+
+        <!-- Error state: fail closed per 01-ARCHITECTURE.md design principle #3 — never a
+             silent empty/stale view -->
+        <div class="card error-card" id="compare-life-error" style="display:none">
+          <span class="ic">⚠</span>
+          <div class="msg">
+            <b>Couldn't load comparison</b>
+            The comparison service didn't respond. Your filters weren't lost — retry when ready.
+          </div>
+          <button class="btn-ghost" id="btn-retry-compare" type="button">Retry</button>
+        </div>
+
+        <!-- Loaded state (default) -->
+        <div id="compare-life-loaded">
+          <div class="grade-board" id="grade-board">
+            <div class="card grade-card">
+              <div class="grade-card-head">
+                <div>
+                  <div class="grade-insurer">Insurer Alpha</div>
+                  <div class="grade-product">Life Cover · v3</div>
+                </div>
+                <div class="grade-overall">
+                  <div class="grade-ring good" style="--pct:87"><span>87</span></div>
+                  <span class="pill ok">Eligible</span>
+                </div>
+              </div>
+              <div class="criteria-list">
+                <div class="criterion"><span>TPD definition</span><b>Own occupation</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Trauma conditions</span><b>42 covered</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Automatic benefits</span><b>7 benefits</b><i class="crit-bar" style="--w:70%"></i></div>
+              </div>
+            </div>
+
+            <div class="card grade-card">
+              <div class="grade-card-head">
+                <div>
+                  <div class="grade-insurer">Insurer Beta</div>
+                  <div class="grade-product">LifeProtect · v5</div>
+                </div>
+                <div class="grade-overall">
+                  <div class="grade-ring warn" style="--pct:64"><span>64</span></div>
+                  <span class="pill ok">Eligible</span>
+                </div>
+              </div>
+              <div class="criteria-list">
+                <div class="criterion"><span>TPD definition</span><b>Modified own occupation</b><i class="crit-bar" style="--w:70%"></i></div>
+                <div class="criterion"><span>Trauma conditions</span><b>33 covered</b><i class="crit-bar" style="--w:51%"></i></div>
+                <div class="criterion"><span>Occupation restriction</span><b>None for Professional</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Premium structure</span><b>Stepped, reviewable</b><i class="crit-bar" style="--w:40%"></i></div>
+                <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Automatic benefits</span><b>4 benefits</b><i class="crit-bar" style="--w:40%"></i></div>
+              </div>
+            </div>
+
+            <div class="card grade-card">
+              <div class="grade-card-head">
+                <div>
+                  <div class="grade-insurer">Insurer Gamma</div>
+                  <div class="grade-product">Life Shield · v2</div>
+                </div>
+                <div class="grade-overall">
+                  <div class="grade-ring warn" style="--pct:65"><span>65</span></div>
+                  <span class="pill warn">65% data completeness</span>
+                </div>
+              </div>
+              <div class="criteria-list">
+                <div class="criterion muted"><span>TPD definition</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
+                <div class="criterion muted"><span>Trauma conditions</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
+                <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
+                <div class="criterion muted"><span>Waiver of premium</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
+                <div class="criterion"><span>Automatic benefits</span><b>9 benefits</b><i class="crit-bar" style="--w:90%"></i></div>
+              </div>
+            </div>
+          </div>
+          <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure (see Insurer Gamma). <span id="live-mode-note" style="display:none">Loaded live from <code class="mono">/api/v1/compare/life</code> — see <code class="mono">?live=1</code> in this page's URL.</span></p>
+        </div>
       </div>
 
       <!-- ---- General insurance: existing document-diff comparison ---- -->
@@ -696,24 +854,82 @@
         </table>
       </div>
     </section>
+
+    <!-- ================= ACCOUNT ================= -->
+    <section class="view" id="view-account">
+      <div class="section-head" style="margin-top:0"><h2>Profile</h2></div>
+      <div class="card" style="padding:20px 22px;display:flex;flex-direction:column;gap:16px;max-width:560px">
+        <label class="field">
+          <span>Name</span>
+          <input type="text" value="J. Chen">
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" value="j.chen@example.co.nz" disabled>
+        </label>
+        <div style="font-size:11px;color:var(--text-faint);margin-top:-10px">Managed by your identity provider — sign in method below</div>
+        <label class="field">
+          <span>Organization / firm</span>
+          <input type="text" value="Chen Insurance Advisers Ltd">
+        </label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="pill ok">Broker</span>
+          <span class="pill neutral">Signed in with Microsoft</span>
+        </div>
+        <div><button class="btn-primary" style="align-self:flex-start;height:36px">Save changes</button></div>
+      </div>
+
+      <div class="section-head"><h2>Security</h2></div>
+      <div class="card" style="padding:18px 22px;max-width:560px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:600;font-size:13px">Sign-in method</div>
+          <div style="font-size:12px;color:var(--text-faint);margin-top:2px">Microsoft Entra SSO — no PolicyIQ password set</div>
+        </div>
+        <span class="pill ok">✓ MFA enforced by IdP</span>
+      </div>
+
+      <div class="section-head"><h2>API keys</h2><span class="meta">For broker/B2B programmatic access</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th>Key</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+          <tbody id="api-key-rows">
+            <tr>
+              <td>Quoting tool integration</td>
+              <td class="mono">pk_live_••••a91f</td>
+              <td class="mono">2026-06-02</td>
+              <td class="mono">3h ago</td>
+              <td><span class="pill ok"><i class="dot"></i>Active</span></td>
+              <td><button class="btn-ghost btn-revoke-key">Revoke</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn-primary" id="btn-new-api-key" style="margin-top:14px;height:36px">Generate new key</button>
+
+      <div class="card" id="api-key-reveal" style="display:none;margin-top:14px;padding:16px 18px;border-color:var(--teal)">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px">New key created</div>
+        <div style="font-size:12px;color:var(--text-faint);margin-bottom:10px">Copy this now — it won't be shown again.</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <code class="mono" id="new-api-key-value" style="flex:1;padding:8px 10px;background:var(--paper);border-radius:var(--radius-sm);font-size:12.5px;overflow-x:auto">pk_live_7f2a9c14e8b3d91a</code>
+          <button class="btn-ghost" id="btn-copy-key" type="button">Copy</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 <script>
   const navItems = document.querySelectorAll('.nav-item');
   const views = document.querySelectorAll('.view');
   const title = document.getElementById('topbar-title');
-  const titles = { dashboard: 'Dashboard', search: 'Search', compare: 'Compare', admin: 'Admin' };
+  const titles = { dashboard: 'Dashboard', search: 'Search', compare: 'Compare', admin: 'Admin', account: 'Account' };
 
-  navItems.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = btn.dataset.view;
-      navItems.forEach(b => b.classList.toggle('active', b.dataset.view === target && b === btn ? true : b.dataset.view === target));
-      navItems.forEach(b => b.classList.remove('active'));
-      document.querySelectorAll(`.nav-item[data-view="${target}"]`)[0].classList.add('active');
-      views.forEach(v => v.classList.toggle('active', v.id === 'view-' + target));
-      title.textContent = titles[target];
-    });
-  });
+  function navigate(target) {
+    navItems.forEach(b => b.classList.toggle('active', b.dataset.view === target));
+    views.forEach(v => v.classList.toggle('active', v.id === 'view-' + target));
+    title.textContent = titles[target] || target;
+  }
+  navItems.forEach(btn => btn.addEventListener('click', () => navigate(btn.dataset.view)));
+  document.getElementById('rail-foot-btn').addEventListener('click', () => navigate('account'));
 
   const root = document.documentElement;
   const btnLight = document.getElementById('btn-light');
@@ -735,6 +951,141 @@
       document.getElementById('compare-general').classList.toggle('active', mode === 'general');
     });
   });
+
+  /* ---- Auth: login / SSO callback / sign-out (see 10-AUTH-AND-ACCOUNTS.md) ----
+     Demo only — no real request is made for the password path or the callback transition;
+     this documents the screen sequence, not a working auth backend. */
+  const screenLogin = document.getElementById('screen-login');
+  const screenCallback = document.getElementById('screen-callback');
+  const appShell = document.getElementById('app-shell');
+
+  function showApp() {
+    screenLogin.style.display = 'none';
+    screenCallback.style.display = 'none';
+    appShell.style.display = 'grid';
+    navigate('dashboard');
+  }
+  function showLogin() {
+    appShell.style.display = 'none';
+    screenCallback.style.display = 'none';
+    screenLogin.style.display = 'flex';
+  }
+
+  document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    showApp(); // password login: no redirect round trip, straight into the app
+  });
+
+  document.getElementById('btn-sso-entra').addEventListener('click', () => {
+    // Real flow: redirect to GET /auth/sso/entra/login, land back on
+    // /auth/sso/entra/callback. Simulated here with a timed transition screen
+    // since this mockup has no backend to redirect through.
+    screenLogin.style.display = 'none';
+    screenCallback.style.display = 'flex';
+    setTimeout(showApp, 900);
+  });
+
+  document.getElementById('btn-signout').addEventListener('click', showLogin);
+
+  /* ---- Compare > Life Insurance: loading / error / loaded demo states ---- */
+  const demoStateBtns = document.querySelectorAll('[data-demo-state]');
+  const blocks = {
+    loading: document.getElementById('compare-life-loading'),
+    error: document.getElementById('compare-life-error'),
+    loaded: document.getElementById('compare-life-loaded'),
+  };
+  function setCompareState(state) {
+    Object.entries(blocks).forEach(([key, el]) => {
+      el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
+    });
+    demoStateBtns.forEach(b => b.classList.toggle('on', b.dataset.demoState === state));
+  }
+  demoStateBtns.forEach(b => b.addEventListener('click', () => setCompareState(b.dataset.demoState)));
+  document.getElementById('btn-retry-compare').addEventListener('click', () => setCompareState('loading'));
+
+  const dataSourcePill = document.getElementById('data-source-pill');
+  function setDataSource(source) {
+    dataSourcePill.textContent = source === 'extracted_verified'
+      ? 'Live, citation-verified data'
+      : 'Synthetic fixture data — pending live crawl';
+    dataSourcePill.classList.toggle('ok', source === 'extracted_verified');
+    dataSourcePill.classList.toggle('neutral', source !== 'extracted_verified');
+  }
+
+  /* ---- Real data connection (see 11-DATA-CONNECTION.md) ----
+     This is the documented fetch pattern against the one endpoint that actually exists,
+     POST /api/v1/compare/life. It only runs with ?live=1 in the URL, pointed at a locally
+     running backend via ?api_base= — the mockup deploys standalone to GitHub Pages with no
+     backend colocated, so a live call is never the default (would just 404/CORS-error for
+     every visitor). */
+  const params = new URLSearchParams(location.search);
+  const isLive = params.get('live') === '1';
+  const API_BASE = params.get('api_base') || 'http://localhost:8000';
+
+  async function fetchLifeComparison() {
+    setCompareState('loading');
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/compare/life`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          age: 38,
+          smoker_status: 'non_smoker',
+          occupation_category: 'professional',
+          product_type: 'life_cover',
+        }),
+      });
+      if (res.status === 401) { showLogin(); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setDataSource(data.data_source);
+      document.getElementById('live-mode-note').style.display = 'inline';
+      // Full re-render of grade-board from `data.results` is a later implementation-slice
+      // task (see 11-DATA-CONNECTION.md) — this call proves the wiring: real request, real
+      // response, real data_source read off the payload rather than hardcoded.
+      setCompareState('loaded');
+    } catch (err) {
+      setCompareState('error');
+    }
+  }
+
+  document.getElementById('btn-grade-compare').addEventListener('click', () => {
+    if (isLive) {
+      fetchLifeComparison();
+      return;
+    }
+    // Not live: cycle loading -> loaded so the state transition is visible without a backend.
+    setCompareState('loading');
+    setTimeout(() => setCompareState('loaded'), 700);
+  });
+
+  /* ---- Account: API key demo interactions (static, no backend) ---- */
+  document.getElementById('btn-new-api-key').addEventListener('click', () => {
+    document.getElementById('api-key-reveal').style.display = 'block';
+  });
+  document.getElementById('btn-copy-key').addEventListener('click', (e) => {
+    const key = document.getElementById('new-api-key-value').textContent;
+    navigator.clipboard?.writeText(key).catch(() => {});
+    e.target.textContent = 'Copied';
+    setTimeout(() => { e.target.textContent = 'Copy'; }, 1200);
+  });
+  document.querySelectorAll('.btn-revoke-key').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('tr');
+      row.querySelector('.pill').outerHTML = '<span class="pill bad"><i class="dot"></i>Revoked</span>';
+      btn.disabled = true;
+    });
+  });
+
+  /* ---- Boot ---- */
+  if (isLive) {
+    // Skip the login screen and land straight on Compare in live-demo mode, so the API call's
+    // result is immediately visible instead of requiring a manual click-through first.
+    showApp();
+    navigate('compare');
+    fetchLifeComparison();
+  }
 </script>
 </body>
 </html>
