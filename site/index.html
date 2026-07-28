@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="PolicyIQ NZ product design system: Dashboard, Search, Compare (Life Insurance grading and General Insurance diff), and Admin views, light and dark.">
+<title>PolicyIQ NZ — Design System &amp; Product Mockup</title>
+<style>
+  :root {
+    --ink: #12181d;
+    --paper: #f1f2ed;
+    --paper-raised: #ffffff;
+    --teal: #0b6e5a;
+    --teal-soft: #0b6e5a1a;
+    --slate: #5c6670;
+    --slate-soft: #5c667026;
+    --amber: #a8650f;
+    --amber-soft: #c17f1e1f;
+    --brick: #a83e32;
+    --brick-soft: #a83e321f;
+    --border: #12181d1f;
+    --border-strong: #12181d3d;
+    --text: #12181d;
+    --text-muted: #4d5761;
+    --text-faint: #7a838c;
+    --shadow: 0 1px 2px #12181d0d, 0 8px 24px -12px #12181d26;
+    --radius-sm: 5px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #eef0ec;
+      --paper: #0d1215;
+      --paper-raised: #161d21;
+      --teal: #33a98a;
+      --teal-soft: #33a98a26;
+      --slate: #8b95a0;
+      --slate-soft: #8b95a026;
+      --amber: #d99a3d;
+      --amber-soft: #d99a3d24;
+      --brick: #d17a6d;
+      --brick-soft: #d17a6d20;
+      --border: #eef0ec1f;
+      --border-strong: #eef0ec3d;
+      --text: #eef0ec;
+      --text-muted: #b3bac2;
+      --text-faint: #838d97;
+      --shadow: 0 1px 2px #00000040, 0 12px 28px -14px #00000080;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eef0ec; --paper: #0d1215; --paper-raised: #161d21;
+    --teal: #33a98a; --teal-soft: #33a98a26; --slate: #8b95a0; --slate-soft: #8b95a026;
+    --amber: #d99a3d; --amber-soft: #d99a3d24; --brick: #d17a6d; --brick-soft: #d17a6d20;
+    --border: #eef0ec1f; --border-strong: #eef0ec3d; --text: #eef0ec;
+    --text-muted: #b3bac2; --text-faint: #838d97;
+    --shadow: 0 1px 2px #00000040, 0 12px 28px -14px #00000080;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --ink: #12181d; --paper: #f1f2ed; --paper-raised: #ffffff;
+    --teal: #0b6e5a; --teal-soft: #0b6e5a1a; --slate: #5c6670; --slate-soft: #5c667026;
+    --amber: #a8650f; --amber-soft: #c17f1e1f; --brick: #a83e32; --brick-soft: #a83e321f;
+    --border: #12181d1f; --border-strong: #12181d3d; --text: #12181d;
+    --text-muted: #4d5761; --text-faint: #7a838c;
+    --shadow: 0 1px 2px #12181d0d, 0 8px 24px -12px #12181d26;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif {
+    font-family: ui-serif, "Iowan Old Style", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  }
+  .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  a { color: inherit; }
+  button { font: inherit; }
+
+  /* ---- App shell ---- */
+  .shell {
+    display: grid;
+    grid-template-columns: 232px 1fr;
+    min-height: 100vh;
+  }
+  .rail {
+    background: var(--paper-raised);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 8px 12px;
+  }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 7px;
+    background: linear-gradient(155deg, var(--teal), #0b6e5a80);
+    display: flex; align-items: center; justify-content: center;
+    color: #f1f2ed; font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .brand-name { font-weight: 650; font-size: 14.5px; letter-spacing: -0.01em; }
+  .brand-tag { font-size: 10.5px; color: var(--text-faint); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 1px; }
+
+  nav.primary { display: flex; flex-direction: column; gap: 2px; }
+  .nav-label {
+    font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-faint); padding: 12px 10px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    color: var(--text-muted); text-decoration: none; cursor: pointer;
+    font-size: 13.3px; font-weight: 500; border: none; background: none;
+    width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--slate-soft); color: var(--text); }
+  .nav-item.active { background: var(--teal-soft); color: var(--teal); font-weight: 650; }
+  .nav-item .ic { width: 16px; text-align: center; opacity: 0.9; font-size: 13px; }
+
+  .rail-foot {
+    margin-top: auto;
+    display: flex; align-items: center; gap: 9px;
+    padding: 10px; border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+  }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--slate-soft); color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 650; flex-shrink: 0;
+  }
+  .rail-foot-text { font-size: 12px; line-height: 1.3; }
+  .rail-foot-text .role { color: var(--text-faint); font-size: 11px; }
+
+  main { min-width: 0; }
+  .topbar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 28px; border-bottom: 1px solid var(--border);
+    background: var(--paper);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .topbar h1 { font-size: 16.5px; font-weight: 650; letter-spacing: -0.01em; }
+  .search-box {
+    flex: 1; max-width: 480px;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--paper-raised); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 7px 11px;
+    color: var(--text-faint); font-size: 13px;
+  }
+  .theme-toggle {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px; background: var(--paper-raised);
+  }
+  .theme-toggle button {
+    border: none; background: none; padding: 5px 10px; border-radius: 999px;
+    color: var(--text-faint); cursor: pointer; font-size: 12px;
+  }
+  .theme-toggle button.on { background: var(--ink); color: var(--paper); }
+
+  .view { padding: 24px 28px 48px; display: none; max-width: 1180px; }
+  .view.active { display: block; }
+
+  /* ---- shared bits ---- */
+  .grid { display: grid; gap: 14px; }
+  .stat-row { grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; }
+  .card {
+    background: var(--paper-raised); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow);
+  }
+  .stat {
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .stat-label { font-size: 11.5px; color: var(--text-faint); letter-spacing: 0.02em; }
+  .stat-value { font-size: 25px; font-weight: 650; letter-spacing: -0.02em; }
+  .stat-value.mono { font-size: 23px; }
+  .stat-delta { font-size: 11.5px; display: flex; align-items: center; gap: 4px; }
+  .stat-delta.good { color: var(--teal); }
+  .stat-delta.warn { color: var(--amber); }
+
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 28px 0 12px;
+  }
+  .section-head h2 { font-size: 14.5px; font-weight: 650; }
+  .section-head .meta { font-size: 12px; color: var(--text-faint); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2.5px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  }
+  .pill.ok { background: var(--teal-soft); color: var(--teal); }
+  .pill.warn { background: var(--amber-soft); color: var(--amber); }
+  .pill.bad { background: var(--brick-soft); color: var(--brick); }
+  .pill.neutral { background: var(--slate-soft); color: var(--text-muted); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; font-size: 11px; letter-spacing: 0.03em; text-transform: uppercase;
+    color: var(--text-faint); font-weight: 600; padding: 9px 14px;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--paper-raised);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--paper-raised); box-shadow: var(--shadow); }
+
+  /* ---- Dashboard specifics ---- */
+  .feed-item {
+    display: flex; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--border);
+  }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-ic {
+    width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+  }
+  .feed-body { flex: 1; min-width: 0; }
+  .feed-title { font-size: 13px; font-weight: 550; }
+  .feed-sub { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+  .feed-time { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; }
+
+  /* ---- Search view ---- */
+  .qbar {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .qbar input {
+    flex: 1; padding: 12px 15px; border-radius: var(--radius-md);
+    border: 1px solid var(--border-strong); background: var(--paper-raised);
+    color: var(--text); font-size: 14.5px;
+  }
+  .qbar button {
+    background: var(--teal); color: #f4faf8; border: none;
+    padding: 0 20px; border-radius: var(--radius-md); font-weight: 600; font-size: 13.5px;
+    cursor: pointer;
+  }
+  .answer-card { padding: 22px 24px; }
+  .answer-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .confidence-bar {
+    width: 90px; height: 5px; border-radius: 3px; background: var(--slate-soft); overflow: hidden;
+  }
+  .confidence-bar > i { display: block; height: 100%; background: var(--teal); border-radius: 3px; }
+  .answer-text { font-size: 15.5px; line-height: 1.65; }
+  .answer-text .hl { background: var(--teal-soft); border-radius: 3px; padding: 0 2px; }
+  .citations { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+  .citations-label { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 2px; }
+  .citation-chip {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    border: 1px solid var(--border); border-radius: var(--radius-md);
+    background: var(--paper);
+  }
+  .citation-chip .src { font-weight: 650; font-size: 12.5px; }
+  .citation-chip .loc { font-size: 11.5px; color: var(--text-faint); }
+  .citation-chip .excerpt { font-size: 12.5px; color: var(--text-muted); flex: 1; font-style: italic; }
+  .citation-chip .verify { margin-left: auto; flex-shrink: 0; }
+
+  /* ---- Compare view ---- */
+  .compare-cell-diff { background: var(--amber-soft); border-left: 2px solid var(--amber); }
+  .compare-cell-missing { color: var(--text-faint); font-style: italic; }
+  .loc-ref { font-size: 11px; color: var(--text-faint); display: block; margin-top: 3px; }
+
+  .btn-ghost {
+    border: 1px solid var(--border-strong); background: var(--paper-raised); color: var(--text);
+    padding: 7px 13px; border-radius: var(--radius-sm); font-size: 12.5px; font-weight: 550; cursor: pointer;
+  }
+  .btn-primary {
+    border: none; background: var(--teal); color: #f4faf8;
+    padding: 0 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 650; cursor: pointer;
+    align-self: end; height: 38px;
+  }
+
+  /* ---- Segmented tabs (compare mode) ---- */
+  .seg-tabs {
+    display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 18px;
+    background: var(--paper-raised); border: 1px solid var(--border); border-radius: 999px;
+  }
+  .seg-tab {
+    border: none; background: none; padding: 7px 16px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600; color: var(--text-faint); cursor: pointer;
+  }
+  .seg-tab.on { background: var(--ink); color: var(--paper); }
+  .compare-panel { display: none; }
+  .compare-panel.active { display: block; }
+
+  /* ---- Life insurance filter bar ---- */
+  .filter-card { padding: 16px 18px; margin-bottom: 22px; }
+  .filter-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 14px; align-items: end;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; color: var(--text-faint); }
+  .field span { letter-spacing: 0.02em; }
+  .field input, .field select {
+    height: 38px; padding: 0 11px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong); background: var(--paper); color: var(--text); font-size: 13px;
+  }
+
+  /* ---- Grade board ---- */
+  .grade-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .grade-card { padding: 16px 18px; }
+  .grade-card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .grade-insurer { font-family: ui-serif, Georgia, serif; font-size: 15px; font-weight: 650; }
+  .grade-product { font-size: 12px; color: var(--text-faint); margin-top: 1px; }
+  .grade-overall { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .grade-ring {
+    width: 46px; height: 46px; border-radius: 50%; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-family: ui-monospace, monospace; font-weight: 700; font-size: 13px; color: var(--text);
+    --ring-color: var(--teal);
+    background: conic-gradient(var(--ring-color) calc(var(--pct) * 1%), var(--slate-soft) 0);
+  }
+  .grade-ring::before {
+    content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--paper-raised);
+  }
+  /* the score text is a positioned sibling painted after ::before in tree
+     order, so it sits above the donut cutout instead of behind it */
+  .grade-ring span { position: relative; }
+  .grade-ring.good { --ring-color: var(--teal); }
+  .grade-ring.warn { --ring-color: var(--amber); }
+  .grade-ring.bad { --ring-color: var(--brick); }
+
+  .criteria-list { display: flex; flex-direction: column; gap: 9px; }
+  .criterion {
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px;
+  }
+  .criterion span { color: var(--text-faint); grid-column: 1; }
+  .criterion b { grid-column: 2; font-weight: 600; text-align: right; font-size: 12px; }
+  .criterion .crit-bar { grid-column: 1 / -1; }
+  .crit-bar {
+    display: block; height: 4px; border-radius: 3px; background: var(--slate-soft); position: relative; overflow: hidden;
+  }
+  .crit-bar::after {
+    content: ""; position: absolute; inset: 0; width: var(--w, 0%);
+    background: var(--teal); border-radius: 3px;
+  }
+  .criterion.muted span, .criterion.muted b { color: var(--text-faint); font-style: italic; font-weight: 500; }
+  .criterion.muted .crit-bar::after { background: var(--slate); opacity: 0.4; }
+
+  .grade-footnote { margin: 18px 2px 0; font-size: 12px; color: var(--text-faint); max-width: 68ch; line-height: 1.6; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .view.active { animation: fade .15s ease-out; }
+    @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; } }
+  }
+  :focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <div class="brand-mark serif">P</div>
+      <div>
+        <div class="brand-name">PolicyIQ <span style="color:var(--teal)">NZ</span></div>
+        <div class="brand-tag">Document Intelligence</div>
+      </div>
+    </div>
+
+    <nav class="primary">
+      <button class="nav-item active" data-view="dashboard"><span class="ic">◧</span> Dashboard</button>
+      <button class="nav-item" data-view="search"><span class="ic">◎</span> Search</button>
+      <button class="nav-item" data-view="compare"><span class="ic">⇄</span> Compare</button>
+      <div class="nav-label">Browse</div>
+      <button class="nav-item" data-view="dashboard"><span class="ic">▤</span> Insurers</button>
+      <button class="nav-item" data-view="compare"><span class="ic">▥</span> Policies</button>
+      <button class="nav-item" data-view="dashboard"><span class="ic">◷</span> Recent Changes</button>
+      <button class="nav-item" data-view="search"><span class="ic">▦</span> Document Explorer</button>
+      <div class="nav-label">System</div>
+      <button class="nav-item" data-view="admin"><span class="ic">⚙</span> Admin</button>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="avatar">JC</div>
+      <div class="rail-foot-text">
+        <div>J. Chen</div>
+        <div class="role">Broker</div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <h1 id="topbar-title" class="serif">Dashboard</h1>
+      <div class="search-box"><span>⌕</span><span>Ask anything — "which insurer covers retaining walls?"</span></div>
+      <div class="theme-toggle" role="group" aria-label="Theme">
+        <button id="btn-light" class="on">Light</button>
+        <button id="btn-dark">Dark</button>
+      </div>
+    </div>
+
+    <!-- ================= DASHBOARD ================= -->
+    <section class="view active" id="view-dashboard">
+      <div class="grid stat-row">
+        <div class="card stat">
+          <div class="stat-label">Documents indexed</div>
+          <div class="stat-value mono">4,812</div>
+          <div class="stat-delta good">▲ 63 this week</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">Insurers tracked</div>
+          <div class="stat-value mono">6 <span style="font-size:13px;color:var(--text-faint);font-weight:500">/ 18 planned</span></div>
+          <div class="stat-delta good">Phase 1 set</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">Citation verification rate</div>
+          <div class="stat-value mono">98.4%</div>
+          <div class="stat-delta good">▲ 0.6pt vs last week</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-label">Insufficient-evidence rate</div>
+          <div class="stat-value mono">4.1%</div>
+          <div class="stat-delta warn">▲ 0.8pt — under review</div>
+        </div>
+      </div>
+
+      <div class="section-head"><h2>Crawler &amp; pipeline health</h2><span class="meta">Updated 6 min ago</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Insurer</th><th>Last crawl</th><th>New docs</th><th>Extraction confidence</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>AA Insurance</td><td class="mono">Today, 04:12</td><td class="mono">3</td><td class="mono">0.93 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
+            <tr><td>AMI</td><td class="mono">Today, 04:15</td><td class="mono">1</td><td class="mono">0.91 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
+            <tr><td>State</td><td class="mono">Today, 04:18</td><td class="mono">0</td><td class="mono">0.90 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
+            <tr><td>Tower</td><td class="mono">Today, 04:21</td><td class="mono">2</td><td class="mono">0.79 avg</td><td><span class="pill warn"><i class="dot"></i>Review queue +4</span></td></tr>
+            <tr><td>NZI</td><td class="mono">Today, 04:25</td><td class="mono">0</td><td class="mono">0.88 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
+            <tr><td>Vero</td><td class="mono">Yesterday, 04:30</td><td class="mono">—</td><td class="mono">—</td><td><span class="pill bad"><i class="dot"></i>Crawl failed — selector drift</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-head"><h2>Recent changes</h2><span class="meta">Last 48 hours</span></div>
+      <div class="card">
+        <div class="feed-item">
+          <div class="feed-ic" style="background:var(--amber-soft);color:var(--amber)">▲</div>
+          <div class="feed-body">
+            <div class="feed-title">Tower Contents — Temporary accommodation benefit increased $2,500 → $3,500</div>
+            <div class="feed-sub">Policy Wording v7, Section 5.1 · p.9</div>
+          </div>
+          <div class="feed-time">2h ago</div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-ic" style="background:var(--brick-soft);color:var(--brick)">✕</div>
+          <div class="feed-body">
+            <div class="feed-title">AMI House — New exclusion added for gradual retaining wall failure</div>
+            <div class="feed-sub">PDS v12, Section 4.2 · p.12</div>
+          </div>
+          <div class="feed-time">6h ago</div>
+        </div>
+        <div class="feed-item">
+          <div class="feed-ic" style="background:var(--teal-soft);color:var(--teal)">＋</div>
+          <div class="feed-body">
+            <div class="feed-title">AA Insurance — New optional cover: portable electronic equipment</div>
+            <div class="feed-sub">Contents Wording v4, Section 6.3 · p.15</div>
+          </div>
+          <div class="feed-time">Yesterday</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SEARCH ================= -->
+    <section class="view" id="view-search">
+      <div class="qbar">
+        <input type="text" value="Which insurer covers damage to retaining walls?" readonly>
+        <button>Ask</button>
+      </div>
+
+      <div class="card answer-card">
+        <div class="answer-meta">
+          <span class="pill neutral">Informational</span>
+          <span style="font-size:12px;color:var(--text-faint)">Confidence</span>
+          <div class="confidence-bar"><i style="width:87%"></i></div>
+          <span class="mono" style="font-size:12px;color:var(--text-muted)">0.87</span>
+        </div>
+        <p class="answer-text serif">
+          Two of the six tracked insurers explicitly cover retaining wall damage under their house policies.
+          <span class="hl">AMI's House Policy</span> covers sudden retaining wall failure up to
+          <span class="hl">$20,000</span>, but as of this week excludes gradual failure or poor drainage.
+          <span class="hl">State's Home Policy</span> covers retaining walls up to
+          <span class="hl">$15,000</span> with no gradual-failure exclusion on file. Tower, NZI, AA Insurance,
+          and Vero's current wordings do not mention retaining walls as a named benefit.
+        </p>
+        <div class="citations">
+          <div class="citations-label">Sources</div>
+          <div class="citation-chip">
+            <span class="src">AMI — House Policy Wording v12</span>
+            <span class="loc mono">p.12 · §4.2</span>
+            <span class="excerpt">"...sudden and unforeseen failure of a retaining wall, up to $20,000..."</span>
+            <span class="verify pill ok">✓ Verified</span>
+          </div>
+          <div class="citation-chip">
+            <span class="src">State — Home Policy Wording v9</span>
+            <span class="loc mono">p.8 · §3.6</span>
+            <span class="excerpt">"...retaining walls forming part of the home, up to $15,000..."</span>
+            <span class="verify pill ok">✓ Verified</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= COMPARE ================= -->
+    <section class="view" id="view-compare">
+      <div class="seg-tabs" role="tablist" aria-label="Comparison mode">
+        <button class="seg-tab on" data-compare-mode="life">Life Insurance</button>
+        <button class="seg-tab" data-compare-mode="general">General Insurance</button>
+      </div>
+
+      <!-- ---- Life insurance: graded, filter-driven comparison ---- -->
+      <div class="compare-panel active" id="compare-life">
+        <div class="card filter-card">
+          <div class="filter-grid">
+            <label class="field">
+              <span>Age</span>
+              <input type="number" value="38" min="16" max="90">
+            </label>
+            <label class="field">
+              <span>Smoker status</span>
+              <select>
+                <option>Non-smoker</option>
+                <option>Smoker</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Occupation category</span>
+              <select>
+                <option>Professional</option>
+                <option>Manual Trade</option>
+                <option>White Collar</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Product type</span>
+              <select>
+                <option>Life Cover</option>
+                <option>Trauma / Critical Illness</option>
+                <option>TPD</option>
+                <option>Income Protection</option>
+              </select>
+            </label>
+            <button class="btn-primary">Grade &amp; compare</button>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>Life Cover — graded for age 38, non-smoker, Professional</h2>
+          <span class="pill neutral">Synthetic fixture data — pending live crawl</span>
+        </div>
+
+        <div class="grade-board">
+          <div class="card grade-card">
+            <div class="grade-card-head">
+              <div>
+                <div class="grade-insurer">Insurer Alpha</div>
+                <div class="grade-product">Life Cover · v3</div>
+              </div>
+              <div class="grade-overall">
+                <div class="grade-ring good" style="--pct:87"><span>87</span></div>
+                <span class="pill ok">Eligible</span>
+              </div>
+            </div>
+            <div class="criteria-list">
+              <div class="criterion"><span>TPD definition</span><b>Own occupation</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Trauma conditions</span><b>42 covered</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Automatic benefits</span><b>7 benefits</b><i class="crit-bar" style="--w:70%"></i></div>
+            </div>
+          </div>
+
+          <div class="card grade-card">
+            <div class="grade-card-head">
+              <div>
+                <div class="grade-insurer">Insurer Beta</div>
+                <div class="grade-product">LifeProtect · v5</div>
+              </div>
+              <div class="grade-overall">
+                <div class="grade-ring warn" style="--pct:64"><span>64</span></div>
+                <span class="pill ok">Eligible</span>
+              </div>
+            </div>
+            <div class="criteria-list">
+              <div class="criterion"><span>TPD definition</span><b>Modified own occupation</b><i class="crit-bar" style="--w:70%"></i></div>
+              <div class="criterion"><span>Trauma conditions</span><b>33 covered</b><i class="crit-bar" style="--w:51%"></i></div>
+              <div class="criterion"><span>Occupation restriction</span><b>None for Professional</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Premium structure</span><b>Stepped, reviewable</b><i class="crit-bar" style="--w:40%"></i></div>
+              <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Automatic benefits</span><b>4 benefits</b><i class="crit-bar" style="--w:40%"></i></div>
+            </div>
+          </div>
+
+          <div class="card grade-card">
+            <div class="grade-card-head">
+              <div>
+                <div class="grade-insurer">Insurer Gamma</div>
+                <div class="grade-product">Life Shield · v2</div>
+              </div>
+              <div class="grade-overall">
+                <div class="grade-ring warn" style="--pct:65"><span>65</span></div>
+                <span class="pill warn">65% data completeness</span>
+              </div>
+            </div>
+            <div class="criteria-list">
+              <div class="criterion muted"><span>TPD definition</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
+              <div class="criterion muted"><span>Trauma conditions</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
+              <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
+              <div class="criterion muted"><span>Waiver of premium</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
+              <div class="criterion"><span>Automatic benefits</span><b>9 benefits</b><i class="crit-bar" style="--w:90%"></i></div>
+            </div>
+          </div>
+        </div>
+        <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure (see Insurer Gamma).</p>
+      </div>
+
+      <!-- ---- General insurance: existing document-diff comparison ---- -->
+      <div class="compare-panel" id="compare-general">
+        <div class="section-head" style="margin-top:0">
+          <h2>Contents insurance — AMI vs Tower</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost">Export PDF</button>
+            <button class="btn-ghost">Export Excel</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th style="width:22%">Attribute</th><th>AMI Contents v6</th><th>Tower Contents v7</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Temporary accommodation</td>
+                <td>$2,500 max, 14 days<span class="loc-ref">p.9 · §5.1</span></td>
+                <td class="compare-cell-diff">$3,500 max, 21 days<span class="loc-ref">p.9 · §5.1 — increased this week</span></td>
+              </tr>
+              <tr>
+                <td>Electric vehicle charging cable</td>
+                <td class="compare-cell-missing">Not covered</td>
+                <td>Covered, up to $1,000<span class="loc-ref">p.14 · §7.4</span></td>
+              </tr>
+              <tr>
+                <td>Portable electronics excess</td>
+                <td>$400<span class="loc-ref">p.6 · §2.3</span></td>
+                <td>$250<span class="loc-ref">p.5 · §2.1</span></td>
+              </tr>
+              <tr>
+                <td>Gradual damage exclusion</td>
+                <td>Excluded — all causes<span class="loc-ref">p.18 · §9.2</span></td>
+                <td>Excluded — except plumbing leaks<span class="loc-ref">p.16 · §8.9</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ADMIN ================= -->
+    <section class="view" id="view-admin">
+      <div class="grid stat-row">
+        <div class="card stat"><div class="stat-label">Queued extraction jobs</div><div class="stat-value mono">12</div></div>
+        <div class="card stat"><div class="stat-label">Failed downloads (7d)</div><div class="stat-value mono">3</div></div>
+        <div class="card stat"><div class="stat-label">Embedding coverage</div><div class="stat-value mono">99.2%</div></div>
+        <div class="card stat"><div class="stat-label">Search queries (24h)</div><div class="stat-value mono">1,204</div></div>
+      </div>
+      <div class="section-head" style="margin-top:8px"><h2>Extraction review queue — low confidence</h2><span class="meta">Threshold &lt; 0.75</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Document</th><th>Section</th><th>Field</th><th>Confidence</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Tower Contents v7</td><td>§6.2, p.11</td><td>Waiting period — accidental damage</td><td class="mono">0.61</td><td><button class="btn-ghost">Review</button></td></tr>
+            <tr><td>Tower Travel v4</td><td>§3.1, p.4</td><td>Excess — drone equipment</td><td class="mono">0.58</td><td><button class="btn-ghost">Review</button></td></tr>
+            <tr><td>NZI Home v10</td><td>§9.4, p.19</td><td>Exclusion — subsidence</td><td class="mono">0.71</td><td><button class="btn-ghost">Review</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+  const navItems = document.querySelectorAll('.nav-item');
+  const views = document.querySelectorAll('.view');
+  const title = document.getElementById('topbar-title');
+  const titles = { dashboard: 'Dashboard', search: 'Search', compare: 'Compare', admin: 'Admin' };
+
+  navItems.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.view;
+      navItems.forEach(b => b.classList.toggle('active', b.dataset.view === target && b === btn ? true : b.dataset.view === target));
+      navItems.forEach(b => b.classList.remove('active'));
+      document.querySelectorAll(`.nav-item[data-view="${target}"]`)[0].classList.add('active');
+      views.forEach(v => v.classList.toggle('active', v.id === 'view-' + target));
+      title.textContent = titles[target];
+    });
+  });
+
+  const root = document.documentElement;
+  const btnLight = document.getElementById('btn-light');
+  const btnDark = document.getElementById('btn-dark');
+  function setTheme(mode) {
+    root.setAttribute('data-theme', mode);
+    btnLight.classList.toggle('on', mode === 'light');
+    btnDark.classList.toggle('on', mode === 'dark');
+  }
+  btnLight.addEventListener('click', () => setTheme('light'));
+  btnDark.addEventListener('click', () => setTheme('dark'));
+
+  const segTabs = document.querySelectorAll('.seg-tab');
+  segTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const mode = tab.dataset.compareMode;
+      segTabs.forEach(t => t.classList.toggle('on', t === tab));
+      document.getElementById('compare-life').classList.toggle('active', mode === 'life');
+      document.getElementById('compare-general').classList.toggle('active', mode === 'general');
+    });
+  });
+</script>
+</body>
+</html>
