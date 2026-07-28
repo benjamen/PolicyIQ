@@ -107,6 +107,15 @@ write and every admin action. Billing/subscription tiers are Phase 2 (see roadma
 users are invited/beta, not self-serve paying customers, so we're not building a commerce layer
 against an unproven extraction pipeline.
 
+Auth is self-hosted, not outsourced to a third-party IdaaS: a WorkOS-style hosted-auth vendor
+was evaluated and rejected once its SSO connections turned out to be billed per-connection —
+not viable pre-revenue. Password login and Microsoft Entra ID SSO (needed for broker/enterprise
+users) both terminate in PolicyIQ issuing its own JWT + refresh pair, so session handling is
+identical downstream of login regardless of method. Entra integration talks directly to
+Microsoft's own OIDC endpoints (authorization-code + PKCE) — an Entra app registration is free;
+we pay in engineering time, not a per-connection SaaS fee. Full design in
+`10-AUTH-AND-ACCOUNTS.md`.
+
 ## Extensibility for future verticals
 
 Adding mortgages in Phase 2 means: a new `vertical` value, a new insurer-registry-equivalent

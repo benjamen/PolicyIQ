@@ -53,6 +53,24 @@ images). `.env.example` in the repo documents every required variable with a pla
 one-line description — no real secret ever exists in the repo, including in git history (checked
 via a pre-commit secret-scan hook).
 
+### Auth configuration (see `10-AUTH-AND-ACCOUNTS.md`)
+
+| Variable | Purpose |
+|---|---|
+| `JWT_SECRET_KEY` | Signs/verifies PolicyIQ-issued access tokens |
+| `JWT_ACCESS_TTL` | Access token lifetime |
+| `JWT_REFRESH_TTL` | Refresh token lifetime |
+| `ENTRA_TENANT_ID` | Microsoft tenant for Entra SSO |
+| `ENTRA_CLIENT_ID` | PolicyIQ's Entra app registration client ID |
+| `ENTRA_CLIENT_SECRET` | Entra app registration secret |
+| `ENTRA_REDIRECT_URI` | Must match the callback URL registered with Entra |
+
+Implies new backend dependencies for the implementation slice that builds this (not added yet,
+this is a docs-only pass): a JWT library (`python-jose` or `pyjwt`), `argon2-cffi` for password
+hashing, an OIDC client (`msal` or `authlib`) for the Entra flow, and a `redis` client for
+refresh-token storage — reusing the Redis instance already required for rate limiting rather than
+adding a second cache dependency.
+
 ## Backups
 
 - Postgres: daily automated snapshot + point-in-time recovery via the managed provider,

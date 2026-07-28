@@ -59,3 +59,11 @@ their own container so the page itself never scrolls horizontally.
   `03-API-SPEC.md` (crawler status, extraction confidence, embedding coverage) — same visual
   language for pipeline health as for user-facing content confidence, since they're the same
   underlying trust signal.
+- **States** (loading / error / auth-redirect / empty, see `11-DATA-CONNECTION.md`) are a
+  reusable pattern, not a one-off per view: skeleton cards for loading, a `brick`-toned retry
+  card for errors (fail-closed, never a silent blank state), redirect-to-login on `401`, and an
+  explicit "not found in indexed documents" rendering for empty/insufficient-evidence — distinct
+  from an error.
+- The **login screen** is intentionally chrome-free — no nav rail, no topbar — since it's a
+  pre-authentication entry point, not a page within the app shell. Every other view (including
+  Account/Settings) lives inside the standard app-shell/nav-rail composition.

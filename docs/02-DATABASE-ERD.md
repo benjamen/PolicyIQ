@@ -29,6 +29,7 @@ erDiagram
     ANSWER_CITATION }o--|| EMBEDDING : references
     USER ||--o{ QUESTION : asks
     USER ||--o{ AUDIT_LOG : generates
+    USER ||--o{ API_KEY : issues
 
     INSURER {
         uuid id PK
@@ -159,8 +160,19 @@ erDiagram
         uuid id PK
         text email
         text role "consumer | broker | admin"
-        text password_hash
+        text password_hash "nullable - SSO-only users have none"
+        text sso_provider "nullable - e.g. entra"
+        text sso_subject "nullable, unique when set - IdP subject/oid claim"
         timestamptz created_at
+    }
+    API_KEY {
+        uuid id PK
+        uuid user_id FK
+        text key_hash "raw key never stored"
+        text label
+        timestamptz created_at
+        timestamptz last_used_at
+        timestamptz revoked_at "nullable"
     }
     QUESTION {
         uuid id PK
@@ -204,5 +216,13 @@ erDiagram
   this is what lets the admin console show "which specific benefit-extractions are low
   confidence" (per the brief's admin requirement) rather than only document-level confidence.
 - No per-tenant partitioning in Phase 1 (single shared corpus). If B2B API licensing becomes a
-  real product (see challenge doc #6), tenant scoping is added at the `USER`/API-key layer, not
+  real product (see challenge doc #6), tenant scoping is added at the `USER`/`API_KEY` layer, not
   by duplicating the document corpus.
+- **`USER.password_hash` is nullable** — password auth and Microsoft Entra SSO are both valid
+  ways to authenticate (see `10-AUTH-AND-ACCOUNTS.md`); an SSO-only user has `sso_provider`/
+  `sso_subject` set and no password. `role` stays PolicyIQ-owned regardless of login method — no
+  external identity provider's group/role claims are trusted for RBAC.
+- **`API_KEY`** is separate from browser sessions: long-lived, `key_hash`-verified (never the raw
+  key), no refresh/rotation flow. This is the mechanism for the B2B/broker "API option" product
+  surface referenced above, and for scripts/integrations that can't do an interactive login
+  redirect.

@@ -14,11 +14,27 @@ behavior.
 | POST | `/auth/login` | Returns access + refresh JWT |
 | POST | `/auth/refresh` | Rotate access token |
 | POST | `/auth/logout` | Revoke refresh token |
+| GET | `/auth/sso/entra/login` | Redirects to Microsoft's OIDC authorize endpoint (PKCE) — the SSO path for broker/enterprise users |
+| GET | `/auth/sso/entra/callback` | Exchanges the auth code, validates the ID token against Microsoft's JWKS, JIT-provisions/looks up the local `USER` by `sso_subject`, issues PolicyIQ's own JWT + refresh pair |
+
+Both login paths (password and Entra SSO) terminate in the same PolicyIQ-issued JWT + refresh
+pair — `Depends(get_current_user)` validates that token's signature and expiry the same way
+regardless of how the session started. `401` on missing/invalid/expired token; `403` is reserved
+for RBAC failures (valid session, wrong role) — see full design in `10-AUTH-AND-ACCOUNTS.md`.
 
 Rate limits (Redis token bucket, per-user + per-IP fallback for anonymous):
 - `search`/`compare` (LLM-backed): 30 req/min authenticated, 5 req/min anonymous.
 - Everything else: 120 req/min.
 - `429` responses include `Retry-After`.
+
+## Account
+| Method | Path | Description |
+|---|---|---|
+| GET | `/account` | Current user's profile, role, org/firm name, auth method |
+| PATCH | `/account` | Update locally-owned profile fields (name, org/firm name) — email/auth method are IdP-owned for SSO users and read-only |
+| GET | `/account/api-keys` | List the caller's API keys (label, prefix, created, last used, revoked) — raw key never returned after creation |
+| POST | `/account/api-keys` | Create a new API key; raw key is returned exactly once in this response |
+| DELETE | `/account/api-keys/{id}` | Revoke a key (sets `revoked_at`, does not delete the row — keeps an audit trail) |
 
 ## Search (query engine)
 | Method | Path | Description |
@@ -46,6 +62,10 @@ and `answer` is a fixed "not found in indexed documents" message — never a bes
 |---|---|---|
 | POST | `/compare` | `{policy_version_ids[]}` → structured side-by-side diff (benefits/limits/exclusions/waiting periods) |
 | GET | `/compare/{id}/export?format=pdf\|xlsx\|md` | Export a saved comparison |
+
+*Note: the life-insurance vertical slice implemented `POST /compare/life` (filter-based, by age/
+smoker/occupation/product-type) ahead of this general `/compare` shape — see
+`09-LIFE-INSURANCE-SLICE.md`. Not yet reconciled; flagged here rather than silently diverging.*
 
 ## Policy / Product / Insurer
 | Method | Path | Description |
