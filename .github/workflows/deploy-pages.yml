@@ -30,6 +30,12 @@ jobs:
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          # Repo has never had Pages configured; ask the action to create the
+          # Pages site itself (build type "workflow") instead of only
+          # verifying one already exists - the default (`enablement: false`)
+          # 404s on a repo where Pages was never turned on.
+          enablement: true
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
