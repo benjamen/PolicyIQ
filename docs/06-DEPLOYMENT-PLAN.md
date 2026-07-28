@@ -65,6 +65,12 @@ via a pre-commit secret-scan hook).
 | `ENTRA_CLIENT_SECRET` | Entra app registration secret |
 | `ENTRA_REDIRECT_URI` | Must match the callback URL registered with Entra |
 
+### CORS
+
+| Variable | Purpose |
+|---|---|
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins (implemented — see `backend/app/main.py`). Defaults to the local dev server, the GitHub Pages mockup origin, and `null` (for local `file://` testing) so `?live=1` in `11-DATA-CONNECTION.md` works without extra setup. Not auth-specific — needed regardless of login method, since it's what lets a cross-origin browser request reach the API at all. |
+
 Implies new backend dependencies for the implementation slice that builds this (not added yet,
 this is a docs-only pass): a JWT library (`python-jose` or `pyjwt`), `argon2-cffi` for password
 hashing, an OIDC client (`msal` or `authlib`) for the Entra flow, and a `redis` client for
