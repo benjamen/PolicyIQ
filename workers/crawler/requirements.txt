@@ -1,0 +1,4 @@
+scrapy>=2.11
+
+# dev/test
+pytest>=8.3
