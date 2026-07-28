@@ -1,0 +1,9 @@
+services:
+  policyiq-backend:
+    build: .
+    restart: unless-stopped
+    # Bound to the host's public interface on a port well clear of bench's default
+    # site-port range (8000+) - confirm this port is actually free on the VPS before
+    # first deploy (see docs/06-DEPLOYMENT-PLAN.md "Live environments").
+    ports:
+      - "8010:8000"

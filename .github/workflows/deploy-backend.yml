@@ -1,0 +1,37 @@
+name: Deploy backend to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - claude/policyiq-nz-architecture-iaifgv
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Runs as a dedicated, low-privilege deploy user scoped to just this
+      # project's checkout on the VPS - never root, never touches Frappe/bench
+      # or anything else on the box. See docs/06-DEPLOYMENT-PLAN.md.
+      - name: SSH and redeploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/PolicyIQ
+            git fetch origin
+            git checkout claude/policyiq-nz-architecture-iaifgv
+            git pull origin claude/policyiq-nz-architecture-iaifgv
+            cd backend
+            docker compose up -d --build
