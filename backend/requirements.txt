@@ -5,6 +5,10 @@ alembic>=1.13
 pydantic>=2.9
 psycopg[binary]>=3.2
 
+# document pipeline: OCR routing (docs/05-AI-EXTRACTION-STRATEGY.md)
+pymupdf>=1.24
+docling>=2.0
+
 # dev/test
 pytest>=8.3
 httpx>=0.27
