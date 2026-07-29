@@ -7,3 +7,14 @@ services:
     # first deploy (see docs/06-DEPLOYMENT-PLAN.md "Live environments").
     ports:
       - "8010:8000"
+    environment:
+      # SQLite on a named volume, not the container's ephemeral filesystem -
+      # otherwise every redeploy silently wipes any data a real crawl/extract
+      # run had written. No Postgres/Redis yet (see docs/06-DEPLOYMENT-PLAN.md) -
+      # this is the smallest change that survives a redeploy, not a permanent choice.
+      - DATABASE_URL=sqlite:////app/data/policyiq.db
+    volumes:
+      - policyiq-data:/app/data
+
+volumes:
+  policyiq-data:
