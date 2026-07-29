@@ -38,6 +38,25 @@ implemented today (fixture-backed `POST /api/v1/compare/life` + `/health`).
 `backend/railway.toml` is left in place but unused — a Railway account was considered first; if
 this VPS ever becomes unavailable, that config is still ready to connect as a fallback.
 
+`backend/docker-compose.yml` mounts two named volumes (`policyiq-data` for the SQLite file,
+`policyiq-documents` for downloaded PDFs — `app/storage/local_disk.py`'s default root) plus a bind
+mount (`./discovered:/app/discovered`) so crawl output written on the host by
+`.github/workflows/ingest.yml` is readable from inside the container by `run_ingest.py`. Every one
+of these was added only once something actually needed to persist across a redeploy or cross the
+host/container boundary — not provisioned speculatively ahead of need.
+
+`LLM_PROVIDER`/`LLM_KEY`/`LLM_MODEL` (real extraction, see `09-LIFE-INSURANCE-SLICE.md`) are
+GitHub Actions secrets, written into a gitignored `backend/.env` by `deploy-backend.yml`'s SSH
+script on every deploy, which `docker-compose.yml`'s `${LLM_PROVIDER:-}` substitution then bakes
+into the container at `docker compose up`. They're consumed only by the offline
+`run_ingest.py` CLI (via `docker compose exec`), never by the running API server.
+
+`.github/workflows/ingest.yml` (`workflow_dispatch`, manual only — deliberately not scheduled)
+runs a real crawl for one named insurer: sets up a Python venv for the crawler directly on the VPS
+host (Scrapy/Twisted has no reason to ship in the API image), runs
+`scrapy crawl policy_documents -a insurer="<name>" -o backend/discovered/<slug>.jsonl`, then
+`docker compose exec`s `run_ingest.py` against that file inside the running container.
+
 **Backend URL: `https://api.policyiq.nz`** — domain registered (Porkbun), DNS A/AAAA records
 point at the VPS, TLS via Let's Encrypt/certbot. Confirmed live: valid cert (`CN=api.policyiq.nz`),
 `/health` returns exactly `{"status":"ok"}`. The mockup's `?live=1` mode

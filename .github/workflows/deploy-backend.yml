@@ -23,10 +23,15 @@ jobs:
       # or anything else on the box. See docs/06-DEPLOYMENT-PLAN.md.
       - name: SSH and redeploy
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          LLM_KEY: ${{ secrets.LLM_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: LLM_PROVIDER,LLM_KEY,LLM_MODEL
           script: |
             set -e
             cd ~/PolicyIQ
@@ -34,4 +39,14 @@ jobs:
             git checkout claude/policyiq-nz-architecture-iaifgv
             git pull origin claude/policyiq-nz-architecture-iaifgv
             cd backend
+            mkdir -p discovered
+            # Written fresh every deploy from GitHub Actions secrets, never
+            # committed (backend/.env is gitignored) - docker-compose.yml's
+            # `${LLM_PROVIDER:-}` etc. substitution reads this file, and
+            # docker compose bakes the values into the container at `up`.
+            cat > .env <<ENVEOF
+            LLM_PROVIDER=${LLM_PROVIDER}
+            LLM_KEY=${LLM_KEY}
+            LLM_MODEL=${LLM_MODEL}
+            ENVEOF
             docker compose up -d --build

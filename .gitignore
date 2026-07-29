@@ -17,6 +17,10 @@ venv/
 *.db
 *.sqlite3
 
+# Crawler output / downloaded documents (never committed - real content, not code)
+discovered/
+document_storage/
+
 # Node / frontend (future)
 node_modules/
 dist/

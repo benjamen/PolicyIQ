@@ -9,6 +9,9 @@ psycopg[binary]>=3.2
 pymupdf>=1.24
 docling>=2.0
 
+# document pipeline: real-HTTP Fetcher for the downloader/ingest CLI
+# (app/pipeline/run_ingest.py) - also used by tests and FastAPI's TestClient
+httpx>=0.27
+
 # dev/test
 pytest>=8.3
-httpx>=0.27

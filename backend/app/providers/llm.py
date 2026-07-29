@@ -132,7 +132,7 @@ def get_provider() -> LLMProvider | None:
     if not provider_name or not api_key:
         return None
     if provider_name == "groq":
-        model = os.environ.get("LLM_MODEL", "llama-3.3-70b-versatile")
+        model = os.environ.get("LLM_MODEL") or "llama-3.3-70b-versatile"
         return GroqProvider(api_key, model=model)
     raise ValueError(f"Unknown LLM_PROVIDER: {provider_name!r} (supported: 'groq')")
 

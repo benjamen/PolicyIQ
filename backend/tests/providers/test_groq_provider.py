@@ -121,6 +121,21 @@ def test_get_provider_returns_groq_provider_when_configured(monkeypatch):
     assert provider._model == "llama-3.1-8b-instant"
 
 
+def test_get_provider_falls_back_to_default_model_when_llm_model_is_set_but_blank(monkeypatch):
+    """docker-compose's `${LLM_MODEL:-}` passthrough sets an empty string,
+    not an unset var, when the LLM_MODEL secret isn't configured - .get()'s
+    default only kicks in for a genuinely missing key, so this must be
+    handled explicitly rather than assumed away."""
+    monkeypatch.setenv("LLM_PROVIDER", "groq")
+    monkeypatch.setenv("LLM_KEY", "sk-test")
+    monkeypatch.setenv("LLM_MODEL", "")
+
+    provider = get_provider()
+
+    assert isinstance(provider, GroqProvider)
+    assert provider._model == "llama-3.3-70b-versatile"
+
+
 def test_get_provider_rejects_unknown_provider_name(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "not-a-real-provider")
     monkeypatch.setenv("LLM_KEY", "sk-test")

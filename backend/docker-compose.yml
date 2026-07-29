@@ -23,6 +23,18 @@ services:
       - LLM_MODEL=${LLM_MODEL:-}
     volumes:
       - policyiq-data:/app/data
+      # Downloaded documents (app/storage/local_disk.py's default root) -
+      # same "must survive a redeploy" reasoning as the SQLite volume above;
+      # this was never mounted before because nothing had downloaded a real
+      # document yet.
+      - policyiq-documents:/app/document_storage
+      # Crawler output handoff: the crawler runs directly on the VPS host
+      # (not in this container - no Scrapy/Twisted dependency belongs in the
+      # API image), writes JSONL here, and `docker compose exec
+      # policyiq-backend python -m app.pipeline.run_ingest --input
+      # discovered/<file>.jsonl` reads it from inside the container.
+      - ./discovered:/app/discovered
 
 volumes:
   policyiq-data:
+  policyiq-documents:
