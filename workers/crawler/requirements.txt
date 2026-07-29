@@ -1,4 +1,8 @@
 scrapy>=2.11
 
+# Playwright fallback for JS-rendered nav (see spiders/policy_document_spider.py)
+scrapy-playwright>=0.0.48
+playwright>=1.61
+
 # dev/test
 pytest>=8.3

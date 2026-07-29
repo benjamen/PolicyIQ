@@ -43,23 +43,31 @@ jobs:
             git checkout claude/policyiq-nz-architecture-iaifgv
             git pull origin claude/policyiq-nz-architecture-iaifgv
 
-            # The crawler (Scrapy/Twisted) runs directly on the VPS host, not
-            # inside the API container - it has no reason to ship in that
-            # image. Idempotent venv setup: only reinstalls if missing.
+            # Dockerized (not a bare venv) specifically because Playwright's
+            # Chromium needs OS-level shared libraries installed via
+            # `playwright install --with-deps`, which needs root - the
+            # deploy user deliberately doesn't have broad sudo on this
+            # shared VPS (also running Frappe/bench/n8n). Building the image
+            # installs those deps inside Docker's isolation instead, so the
+            # host itself is never touched. Same prune hygiene as
+            # deploy-backend.yml, for the same disk-space reason.
             cd workers/crawler
-            if [ ! -d .venv ]; then
-              python3 -m venv .venv
-            fi
-            ./.venv/bin/pip install -q -r requirements.txt
+            docker image prune -af
+            docker builder prune -af
+            docker build -t policyiq-crawler .
 
             SLUG=$(echo "$INSURER" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-*//;s/-*$//')
             mkdir -p ../../backend/discovered
-            OUTFILE="../../backend/discovered/${SLUG}.jsonl"
 
             echo "=== crawling: $INSURER ==="
-            ./.venv/bin/scrapy crawl policy_documents -a insurer="$INSURER" -o "$OUTFILE"
+            docker run --rm \
+              -e INSURER="$INSURER" \
+              -e OUTFILE="/app/discovered/${SLUG}.jsonl" \
+              -v "$(pwd)/../../backend/discovered:/app/discovered" \
+              policyiq-crawler
 
             echo "=== discovered documents ==="
+            OUTFILE="../../backend/discovered/${SLUG}.jsonl"
             LINES=$(wc -l < "$OUTFILE" 2>/dev/null || echo 0)
             echo "$LINES candidate document(s) found"
             cat "$OUTFILE" 2>/dev/null || true

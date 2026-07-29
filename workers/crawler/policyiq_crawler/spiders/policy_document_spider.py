@@ -8,11 +8,21 @@ one insurer at a time: `scrapy crawl policy_documents -a insurer="AIA New Zealan
 Discovery order per docs/04-CRAWLER-STRATEGY.md: sitemap.xml first (cheap,
 most sites have one), falling back to following in-domain links up to
 DEPTH_LIMIT (settings.py) for sites that need it. This spider handles the
-link-following fallback and PDF extraction; Playwright rendering for JS-only
-nav is a separate, heavier fallback invoked only when this pass finds
-suspiciously few links (see docs/04-CRAWLER-STRATEGY.md "static fetch tried
-first, per URL") - not implemented in this skeleton, flagged as a TODO
-rather than stubbed with fake behavior.
+link-following fallback and PDF extraction. Playwright rendering for JS-only
+nav (docs/04-CRAWLER-STRATEGY.md: "static fetch tried first, per URL...
+Playwright only engages when a page requires JS rendering") is a per-URL
+fallback, not a whole-crawl heuristic: any single response with too few
+links to be real navigation gets retried once, rendered, before the crawl
+moves on. Confirmed necessary against a real site (2026-07-29): Partners
+Life's homepage is a Vue SPA shell with zero <a href> tags anywhere in the
+raw HTML - real nav only exists after client-side rendering.
+
+This uses a real, honestly-identified headless Chromium (same USER_AGENT
+as every other request, see settings.py) - no CDP-hiding, no fingerprint
+spoofing, no stealth plugins. It is not expected to (and isn't meant to)
+get past a site's deliberate anti-automation controls (e.g. AIA's WAF,
+which resets the HTTP/2 stream before any static request even completes) -
+that's a different, out-of-scope problem this fallback doesn't touch.
 """
 
 from __future__ import annotations
@@ -29,6 +39,11 @@ from policyiq_crawler.registry import discover_insurers
 
 class PolicyDocumentSpider(scrapy.Spider):
     name = "policy_documents"
+
+    # Literally zero links, matching the confirmed Partners Life evidence
+    # exactly - conservative on purpose, not a tunable per-insurer knob yet
+    # since only one insurer is confirmed to need this.
+    link_count_threshold = 1
 
     def __init__(self, insurer: str | None = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -54,8 +69,32 @@ class PolicyDocumentSpider(scrapy.Spider):
     def parse(self, response: scrapy.http.Response):
         if response.headers.get("Content-Type", b"").decode().startswith("application/pdf"):
             return
+        yield from self._extract_links(response)
 
-        for link in response.css("a[href]"):
+    def _extract_links(self, response: scrapy.http.Response):
+        """Shared PDF/link extraction - identical whether `response` came
+        from the plain downloader or a Playwright-rendered page (scrapy-
+        playwright still returns a normal TextResponse)."""
+        links = response.css("a[href]")
+
+        already_rendered = response.meta.get("playwright", False)
+        if not already_rendered and len(links) < self.link_count_threshold:
+            self.logger.info(
+                "Only %d link(s) found statically at %s; retrying with Playwright",
+                len(links), response.url,
+            )
+            yield scrapy.Request(
+                response.url,
+                callback=self.parse,
+                meta={"playwright": True},
+                # Same URL, different rendering path - must bypass
+                # RFPDupeFilter or this retry is silently dropped as a
+                # "duplicate" of the request that just returned 0 links.
+                dont_filter=True,
+            )
+            return
+
+        for link in links:
             href = link.attrib.get("href", "")
             text = " ".join(link.css("::text").getall()).strip()
             if not href:
