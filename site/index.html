@@ -1014,13 +1014,12 @@
 
   /* ---- Real data connection (see 11-DATA-CONNECTION.md) ----
      This is the documented fetch pattern against the one endpoint that actually exists,
-     POST /api/v1/compare/life. It only runs with ?live=1 in the URL, pointed at a locally
-     running backend via ?api_base= — the mockup deploys standalone to GitHub Pages with no
-     backend colocated, so a live call is never the default (would just 404/CORS-error for
-     every visitor). */
+     POST /api/v1/compare/life. It only runs with ?live=1 in the URL. Defaults to the real
+     deployed backend (api.policyiq.nz, HTTPS via Let's Encrypt — see docs/06-DEPLOYMENT-PLAN.md);
+     override with ?api_base= to point at a locally running backend instead during development. */
   const params = new URLSearchParams(location.search);
   const isLive = params.get('live') === '1';
-  const API_BASE = params.get('api_base') || 'http://localhost:8000';
+  const API_BASE = params.get('api_base') || 'https://api.policyiq.nz';
 
   async function fetchLifeComparison() {
     setCompareState('loading');
