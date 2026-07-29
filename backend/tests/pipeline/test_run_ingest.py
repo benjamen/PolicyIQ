@@ -78,6 +78,68 @@ def test_first_run_creates_insurer_product_policy_and_sections_but_skips_extract
     assert session.execute(select(GradedFact)).scalars().first() is None
 
 
+def test_one_bad_document_does_not_sink_the_rest_of_the_batch(
+    session, tmp_path, synthetic_pdf_bytes, monkeypatch
+):
+    """Regression test for a real failure hit during the first live crawl+
+    ingest run (2026-07-29): run_ingest used to commit only once, at the very
+    end - an OCR exception on the FIRST document crashed the whole process
+    and discarded every other document's progress too, not just the failing
+    one. Two documents, same insurer; the first's OCR step raises, the
+    second must still be fully processed and committed."""
+    input_path = _write_jsonl(tmp_path / "partners-life.jsonl", [
+        {
+            "insurer": "Partners Life",
+            "source_page_url": "https://partnerslife.co.nz/trauma-cover",
+            "document_url": "https://partnerslife.co.nz/corrupt.pdf",
+            "link_text": "Download brochure",
+            "doc_type_guess": "brochure",
+        },
+        {
+            "insurer": "Partners Life",
+            "source_page_url": "https://partnerslife.co.nz/life-cover",
+            "document_url": "https://partnerslife.co.nz/pds.pdf",
+            "link_text": "Download brochure",
+            "doc_type_guess": "brochure",
+        },
+    ])
+    fetcher = FakeFetcher({
+        "https://partnerslife.co.nz/corrupt.pdf": ("etag-bad", None, b"not a real pdf at all"),
+        "https://partnerslife.co.nz/pds.pdf": ("etag-good", None, synthetic_pdf_bytes),
+    })
+    storage = LocalDiskStorage(tmp_path / "storage")
+
+    import app.pipeline.run_ingest as run_ingest_module
+
+    real_route_ocr = run_ingest_module.route_ocr
+
+    def flaky_route_ocr(content: bytes):
+        if content == b"not a real pdf at all":
+            raise ValueError("simulated OCR failure - not a real PDF")
+        return real_route_ocr(content)
+
+    monkeypatch.setattr(run_ingest_module, "route_ocr", flaky_route_ocr)
+
+    stats = run_ingest(
+        input_path, product_type="life_cover",
+        session=session, fetcher=fetcher, storage=storage, provider=None,
+    )
+
+    assert stats.rows_seen == 2
+    assert stats.documents_failed == 1
+    assert stats.sections_built == 1  # only from the document that succeeded
+
+    # The failed document leaves no partial/orphaned rows behind - the
+    # rollback discards it cleanly. Only the successful document's data
+    # is actually in the database.
+    from app.db.models import Document
+    documents = session.execute(select(Document)).scalars().all()
+    assert len(documents) == 1
+    assert documents[0].storage_key.endswith("pds.pdf")
+    sections = session.execute(select(Section)).scalars().all()
+    assert len(sections) == 1
+
+
 def test_second_run_with_unchanged_etag_reuses_the_same_policy_version(
     session, tmp_path, synthetic_pdf_bytes
 ):

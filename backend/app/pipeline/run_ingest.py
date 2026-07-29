@@ -104,6 +104,7 @@ class IngestStats:
     rows_seen: int = 0
     documents_downloaded: int = 0
     documents_unchanged: int = 0
+    documents_failed: int = 0
     sections_built: int = 0
     extraction_skipped_no_provider: bool = False
 
@@ -126,55 +127,72 @@ def run_ingest(
                 continue
             row = json.loads(line)
             stats.rows_seen += 1
-
-            insurer_name = row["insurer"]
             document_url = row["document_url"]
-            doc_type = row.get("doc_type_guess") or "unknown"
 
-            root_url = row.get("source_page_url") or document_url
-            parts = urlsplit(root_url)
-            website_root = f"{parts.scheme}://{parts.netloc}"
+            try:
+                insurer_name = row["insurer"]
+                doc_type = row.get("doc_type_guess") or "unknown"
 
-            insurer = _get_or_create_insurer(session, insurer_name, website_root)
-            product = _get_or_create_product(session, insurer.id, product_type)
-            policy = _get_or_create_policy(session, product.id, name=product_type)
-            policy_version = _get_or_create_current_policy_version(session, policy.id)
+                root_url = row.get("source_page_url") or document_url
+                parts = urlsplit(root_url)
+                website_root = f"{parts.scheme}://{parts.netloc}"
 
-            outcome = download_and_version(
-                session, fetcher, storage,
-                policy_version_id=policy_version.id,
-                insurer_name=insurer_name,
-                product_type=product_type,
-                doc_type=doc_type,
-                document_url=document_url,
-            )
+                insurer = _get_or_create_insurer(session, insurer_name, website_root)
+                product = _get_or_create_product(session, insurer.id, product_type)
+                policy = _get_or_create_policy(session, product.id, name=product_type)
+                policy_version = _get_or_create_current_policy_version(session, policy.id)
 
-            if outcome.skipped_reason == "unchanged_etag":
-                stats.documents_unchanged += 1
-                continue
-            stats.documents_downloaded += 1
-
-            content = storage.get(outcome.document.storage_key)
-            parsed_document = route_ocr(content)
-
-            sections = build_sections(
-                session, parsed_document,
-                policy_version_id=policy_version.id, document_id=outcome.document.id,
-            )
-            stats.sections_built += len(sections)
-
-            if provider is None:
-                stats.extraction_skipped_no_provider = True
-                continue
-
-            for section in sections:
-                process_section(
-                    session, provider,
-                    policy_version_id=policy_version.id, document_id=outcome.document.id,
-                    section=section, parsed_document=parsed_document,
+                outcome = download_and_version(
+                    session, fetcher, storage,
+                    policy_version_id=policy_version.id,
+                    insurer_name=insurer_name,
+                    product_type=product_type,
+                    doc_type=doc_type,
+                    document_url=document_url,
                 )
 
-    session.commit()
+                if outcome.skipped_reason == "unchanged_etag":
+                    stats.documents_unchanged += 1
+                    session.commit()
+                    continue
+                stats.documents_downloaded += 1
+
+                content = storage.get(outcome.document.storage_key)
+                parsed_document = route_ocr(content)
+
+                sections = build_sections(
+                    session, parsed_document,
+                    policy_version_id=policy_version.id, document_id=outcome.document.id,
+                )
+                stats.sections_built += len(sections)
+
+                if provider is None:
+                    stats.extraction_skipped_no_provider = True
+                    session.commit()
+                    continue
+
+                for section in sections:
+                    process_section(
+                        session, provider,
+                        policy_version_id=policy_version.id, document_id=outcome.document.id,
+                        section=section, parsed_document=parsed_document,
+                    )
+
+                session.commit()
+            except Exception as exc:  # noqa: BLE001 - one bad document must not sink the batch
+                # A single malformed/unparseable document (corrupt PDF, OCR
+                # failure, etc.) used to crash the whole run before any
+                # later document got a chance - since commit() only ran
+                # once at the very end, that also silently discarded every
+                # earlier document's progress in the same run, not just the
+                # failing one. Roll back this document's partial DB state
+                # (the session is otherwise left unusable after an
+                # exception mid-flush) and keep going - already-committed
+                # documents from earlier in this same run are unaffected.
+                session.rollback()
+                stats.documents_failed += 1
+                print(f"FAILED: {document_url}: {exc}")
+
     return stats
 
 
@@ -202,7 +220,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(
         f"rows_seen={stats.rows_seen} documents_downloaded={stats.documents_downloaded} "
-        f"documents_unchanged={stats.documents_unchanged} sections_built={stats.sections_built}"
+        f"documents_unchanged={stats.documents_unchanged} documents_failed={stats.documents_failed} "
+        f"sections_built={stats.sections_built}"
     )
     if stats.extraction_skipped_no_provider:
         print("extraction skipped: LLM_PROVIDER/LLM_KEY not set (see .env.example, app/providers/llm.py)")
