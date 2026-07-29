@@ -6,12 +6,12 @@ Handoff from the crawler is a file (docs/04-CRAWLER-STRATEGY.md): Scrapy's
 `-o` flag writes DiscoveredDocumentItem rows as JSON Lines
 (`scrapy crawl policy_documents -a insurer="AIA New Zealand" -o discovered/aia.jsonl`).
 
-No real LLMProvider exists yet (see app/providers/llm.py) - only
-MockLLMProvider, which only answers pre-canned test inputs and would either
-crash or fabricate a result against arbitrary real document text. A real run
-therefore downloads, OCRs, and builds sections, then reports extraction was
-skipped - it never runs the mock against real text, matching this project's
-fail-closed principle (docs/01-ARCHITECTURE.md).
+Extraction uses whatever app.providers.llm.get_provider() returns for the
+current environment (LLM_PROVIDER/LLM_KEY/LLM_MODEL - see .env.example). If
+neither is set, extraction is skipped and reported rather than run with
+MockLLMProvider (which only answers pre-canned test inputs and would crash
+or fabricate a result against arbitrary real document text) - matching this
+project's fail-closed principle (docs/01-ARCHITECTURE.md).
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ from app.ocr.router import route_ocr
 from app.pipeline.downloader import HeadResult, download_and_version
 from app.pipeline.extraction import process_section
 from app.pipeline.sections import build_sections
-from app.providers.llm import LLMProvider
+from app.providers.llm import LLMProvider, get_provider
 from app.storage.base import StorageAdapter
 from app.storage.local_disk import storage_from_env
 
@@ -190,9 +190,7 @@ def main(argv: list[str] | None = None) -> int:
     session = SessionLocal()
     storage = storage_from_env()
     fetcher = HttpxFetcher()
-
-    # See module docstring: no real LLMProvider is wired up yet.
-    provider = None
+    provider = get_provider()
 
     try:
         stats = run_ingest(
@@ -207,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         f"documents_unchanged={stats.documents_unchanged} sections_built={stats.sections_built}"
     )
     if stats.extraction_skipped_no_provider:
-        print("extraction skipped: no real LLMProvider configured yet (see app/providers/llm.py)")
+        print("extraction skipped: LLM_PROVIDER/LLM_KEY not set (see .env.example, app/providers/llm.py)")
     return 0
 
 

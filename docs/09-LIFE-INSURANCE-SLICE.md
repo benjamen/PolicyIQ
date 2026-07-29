@@ -27,7 +27,7 @@ insurance products." Scoped per the decisions made when this was picked up:
 | `backend/app/storage/` | `StorageAdapter` Protocol + `LocalDiskStorage`; content-addressed key scheme (`{insurer}/{product_type}/{doc_type}/{sha256[:12]}-{filename}`) |
 | `backend/app/pipeline/downloader.py` | `download_and_version()` - HEAD-first ETag/Last-Modified diffing, sha256 hash-dedup across URLs, storage + `Document` row + `PolicyVersion` bump |
 | `backend/app/ocr/` | `route_ocr()` - PyMuPDF native-text extraction first (95% page-coverage threshold), Docling structured/scanned fallback |
-| `backend/app/providers/llm.py` | `LLMProvider` Protocol, `MockLLMProvider`, Pydantic extraction schema (`SectionExtraction` + per-table sub-models), `extract_with_retry()` |
+| `backend/app/providers/llm.py` | `LLMProvider` Protocol, `MockLLMProvider`, real `GroqProvider` (Groq's OpenAI-compatible chat completions API via `httpx`, no vendor SDK), `get_provider()` (reads `LLM_PROVIDER`/`LLM_KEY`/`LLM_MODEL`, `None` when unconfigured), Pydantic extraction schema (`SectionExtraction` + per-table sub-models), `extract_with_retry()` |
 | `backend/app/verification.py` | `verify_citation()` - the "never hallucinate" gate: exact-substring then fuzzy (`difflib`) match of every claimed `source_quote` against the section's own parsed text; unverified facts are rejected, never persisted |
 | `backend/app/pipeline/sections.py`, `backend/app/pipeline/extraction.py` | `build_sections()` (one `Section` per PDF page, Phase-1) + `process_section()` (calls the LLM provider, verifies every fact, persists only verified ones) |
 | `backend/app/pipeline/run_ingest.py` | CLI tying it together: crawler JSONL → downloader → OCR → sections → extraction, for one insurer's crawl output |
@@ -89,6 +89,26 @@ extraction run has populated the database, `POST /api/v1/compare/life` returns
 not a silent fallback to fake data. This is deliberate, matching `01-ARCHITECTURE.md` principle
 #3 (fail closed, never guess).
 
+## Running a real ingest
+
+`GroqProvider` (`backend/app/providers/llm.py`) is a real, tested `LLMProvider` implementation -
+Groq's OpenAI-compatible chat completions API called directly via `httpx` (no vendor SDK), JSON
+mode plus the target Pydantic schema spelled out in the system prompt, every provider-level
+failure (network error, non-200, malformed body) normalized to a `ValueError` so it retries and
+degrades to a typed `ExtractionFailure` exactly like a schema-invalid response would, rather than
+crashing the run. It's exercised in tests against a fake `httpx` transport
+(`tests/providers/test_groq_provider.py`) - no live call to Groq has been made from this sandbox
+or CI, matching the same real-network-call caveat as Docling.
+
+To actually populate data: set `LLM_PROVIDER=groq`, `LLM_KEY=<a real Groq API key>`, and
+optionally `LLM_MODEL` in the environment `run_ingest.py` runs in (see `.env.example`;
+`docker-compose.yml` passes these three through to the container for `docker compose exec
+policyiq-backend python -m app.pipeline.run_ingest --input <jsonl> --product-type life_cover`).
+`get_provider()` returns `None` - extraction is skipped and reported, not faked - if either var
+is unset. These are not set anywhere in this repo or on the deployed VPS yet; wiring a real key in
+is an operational step for whoever runs the first real ingest, same treatment as every other
+secret this project has handled (JWT signing key, Entra credentials).
+
 ## What's verified in this session
 
 - `backend`: 52 tests pass, 1 explicitly skipped (`pytest`) - grading engine, FastAPI
@@ -119,11 +139,6 @@ not a silent fallback to fake data. This is deliberate, matching `01-ARCHITECTUR
 
 ## Not built yet
 
-- **A real `LLMProvider` implementation.** `app/providers/llm.py`'s Protocol, retry logic, and
-  Pydantic extraction schema are built and tested against `MockLLMProvider`; no real
-  Groq/OpenAI/etc. adapter exists yet. `run_ingest.py` runs download + OCR + section-building
-  against real documents but explicitly skips extraction (reports it, doesn't fake it) until a
-  real provider is wired in - it will never run the mock against arbitrary real document text.
 - **A real crawl.** No live crawl has been run against a production insurer site from this
   session's development sandbox (network egress here is policy-restricted to an allowlist - see
   `06-DEPLOYMENT-PLAN.md`). The project's VPS (already hosting the live backend, unrestricted

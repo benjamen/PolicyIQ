@@ -13,6 +13,14 @@ services:
       # run had written. No Postgres/Redis yet (see docs/06-DEPLOYMENT-PLAN.md) -
       # this is the smallest change that survives a redeploy, not a permanent choice.
       - DATABASE_URL=sqlite:////app/data/policyiq.db
+      # Only read by `docker compose exec policyiq-backend python -m
+      # app.pipeline.run_ingest ...` for a real ingest run - the running API
+      # server never touches these. Not set by this repo; export them in the
+      # VPS's own shell (or a gitignored backend/.env) before `docker compose
+      # up`, same as any other deploy secret (see .env.example).
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_KEY=${LLM_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-}
     volumes:
       - policyiq-data:/app/data
 
