@@ -56,8 +56,7 @@ def upgrade() -> None:
     sa.Column('source_url', sa.String(length=1000), nullable=False),
     sa.Column('downloaded_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['policy_version_id'], ['policy_version.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('storage_key')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_document_sha256_hash'), 'document', ['sha256_hash'], unique=False)
 

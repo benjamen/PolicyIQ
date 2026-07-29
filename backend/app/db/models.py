@@ -128,7 +128,10 @@ class Document(Base):
     id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=_uuid)
     policy_version_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("policy_version.id"))
     doc_type: Mapped[str] = mapped_column(String(30))
-    storage_key: Mapped[str] = mapped_column(String(500), unique=True)
+    # Not unique: two Document rows (different policy_version/source_url) can
+    # legitimately share a storage_key when they're the same bytes reused
+    # across URLs - see app/pipeline/downloader.py's dedup-by-hash path.
+    storage_key: Mapped[str] = mapped_column(String(500))
     sha256_hash: Mapped[str] = mapped_column(String(64), index=True)
     etag: Mapped[str | None] = mapped_column(String(200), nullable=True)
     last_modified: Mapped[str | None] = mapped_column(String(80), nullable=True)
