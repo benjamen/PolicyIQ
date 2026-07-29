@@ -1,0 +1,62 @@
+name: Deploy backend to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - claude/policyiq-nz-architecture-iaifgv
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # Runs as a dedicated, low-privilege deploy user scoped to just this
+      # project's checkout on the VPS - never root, never touches Frappe/bench
+      # or anything else on the box. See docs/06-DEPLOYMENT-PLAN.md.
+      - name: SSH and redeploy
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          LLM_KEY: ${{ secrets.LLM_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: LLM_PROVIDER,LLM_KEY,LLM_MODEL
+          script: |
+            set -e
+            cd ~/PolicyIQ
+            git fetch origin
+            git checkout claude/policyiq-nz-architecture-iaifgv
+            git pull origin claude/policyiq-nz-architecture-iaifgv
+            cd backend
+            mkdir -p discovered
+            # Written fresh every deploy from GitHub Actions secrets, never
+            # committed (backend/.env is gitignored) - docker-compose.yml's
+            # `${LLM_PROVIDER:-}` etc. substitution reads this file, and
+            # docker compose bakes the values into the container at `up`.
+            cat > .env <<ENVEOF
+            LLM_PROVIDER=${LLM_PROVIDER}
+            LLM_KEY=${LLM_KEY}
+            LLM_MODEL=${LLM_MODEL}
+            ENVEOF
+            # Reclaim disk from prior builds' dangling images and stale
+            # BuildKit cache before building again - docling/torch's large
+            # dependency tree means a full requirements.txt-triggered
+            # rebuild can be gigabytes; left unpruned across repeated
+            # deploys this filled the VPS's disk and failed a build
+            # (ENOSPC mid pip-install). Never touches named volumes (the
+            # SQLite DB, downloaded documents) or the running container's
+            # own image, since Docker won't remove an image still in use.
+            docker image prune -af
+            docker builder prune -af
+            docker compose up -d --build

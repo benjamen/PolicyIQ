@@ -1,0 +1,70 @@
+name: Run a real crawl + ingest
+
+# Manual only - this hits a real insurer's live website (docs/04-CRAWLER-
+# STRATEGY.md's politeness settings apply: ROBOTSTXT_OBEY, low concurrency,
+# AutoThrottle). Run one insurer at a time, deliberately, not on a schedule.
+on:
+  workflow_dispatch:
+    inputs:
+      insurer:
+        description: "Insurer name - must exactly match an entry in workers/crawler/policyiq_crawler/registry.py"
+        required: true
+        default: "AIA New Zealand"
+      product_type:
+        description: "Product type tag applied to ingested documents"
+        required: false
+        default: "life_cover"
+
+concurrency:
+  group: backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      # Same low-privilege deploy user as deploy-backend.yml - never root,
+      # scoped to this project's checkout. See docs/06-DEPLOYMENT-PLAN.md.
+      - name: SSH crawl + ingest
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          INSURER: ${{ inputs.insurer }}
+          PRODUCT_TYPE: ${{ inputs.product_type }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: INSURER,PRODUCT_TYPE
+          command_timeout: 30m
+          script: |
+            set -e
+            cd ~/PolicyIQ
+            git fetch origin
+            git checkout claude/policyiq-nz-architecture-iaifgv
+            git pull origin claude/policyiq-nz-architecture-iaifgv
+
+            # The crawler (Scrapy/Twisted) runs directly on the VPS host, not
+            # inside the API container - it has no reason to ship in that
+            # image. Idempotent venv setup: only reinstalls if missing.
+            cd workers/crawler
+            if [ ! -d .venv ]; then
+              python3 -m venv .venv
+            fi
+            ./.venv/bin/pip install -q -r requirements.txt
+
+            SLUG=$(echo "$INSURER" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-*//;s/-*$//')
+            mkdir -p ../../backend/discovered
+            OUTFILE="../../backend/discovered/${SLUG}.jsonl"
+
+            echo "=== crawling: $INSURER ==="
+            ./.venv/bin/scrapy crawl policy_documents -a insurer="$INSURER" -o "$OUTFILE"
+
+            echo "=== discovered documents ==="
+            LINES=$(wc -l < "$OUTFILE" 2>/dev/null || echo 0)
+            echo "$LINES candidate document(s) found"
+            cat "$OUTFILE" 2>/dev/null || true
+
+            cd ../../backend
+            echo "=== downloading + OCR + sections (extraction only if LLM_PROVIDER/LLM_KEY are set) ==="
+            docker compose exec -T policyiq-backend python -m app.pipeline.run_ingest \
+              --input "discovered/${SLUG}.jsonl" --product-type "$PRODUCT_TYPE"

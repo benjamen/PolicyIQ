@@ -1,0 +1,40 @@
+services:
+  policyiq-backend:
+    build: .
+    restart: unless-stopped
+    # Bound to the host's public interface on a port well clear of bench's default
+    # site-port range (8000+) - confirm this port is actually free on the VPS before
+    # first deploy (see docs/06-DEPLOYMENT-PLAN.md "Live environments").
+    ports:
+      - "8010:8000"
+    environment:
+      # SQLite on a named volume, not the container's ephemeral filesystem -
+      # otherwise every redeploy silently wipes any data a real crawl/extract
+      # run had written. No Postgres/Redis yet (see docs/06-DEPLOYMENT-PLAN.md) -
+      # this is the smallest change that survives a redeploy, not a permanent choice.
+      - DATABASE_URL=sqlite:////app/data/policyiq.db
+      # Only read by `docker compose exec policyiq-backend python -m
+      # app.pipeline.run_ingest ...` for a real ingest run - the running API
+      # server never touches these. Not set by this repo; export them in the
+      # VPS's own shell (or a gitignored backend/.env) before `docker compose
+      # up`, same as any other deploy secret (see .env.example).
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_KEY=${LLM_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+    volumes:
+      - policyiq-data:/app/data
+      # Downloaded documents (app/storage/local_disk.py's default root) -
+      # same "must survive a redeploy" reasoning as the SQLite volume above;
+      # this was never mounted before because nothing had downloaded a real
+      # document yet.
+      - policyiq-documents:/app/document_storage
+      # Crawler output handoff: the crawler runs directly on the VPS host
+      # (not in this container - no Scrapy/Twisted dependency belongs in the
+      # API image), writes JSONL here, and `docker compose exec
+      # policyiq-backend python -m app.pipeline.run_ingest --input
+      # discovered/<file>.jsonl` reads it from inside the container.
+      - ./discovered:/app/discovered
+
+volumes:
+  policyiq-data:
+  policyiq-documents:
