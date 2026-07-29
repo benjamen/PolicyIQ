@@ -1,8 +1,20 @@
 from __future__ import annotations
 
+from enum import Enum
+
 from pydantic import BaseModel, Field
 
 from app.domain.models import SmokerStatus
+
+
+class DataSource(str, Enum):
+    """See docs/11-DATA-CONNECTION.md. Both values are kept even though
+    nothing emits SYNTHETIC_FIXTURE anymore (app/fixtures/sample_data.py was
+    deleted once this pipeline existed) - the UI's status-pill component
+    documents both, so the closed set stays complete."""
+
+    SYNTHETIC_FIXTURE = "synthetic_fixture"
+    EXTRACTED_VERIFIED = "extracted_verified"
 
 
 class CompareRequest(BaseModel):
@@ -41,4 +53,4 @@ class GradeReportOut(BaseModel):
 class CompareResponse(BaseModel):
     filters: CompareRequest
     results: list[GradeReportOut]
-    data_source: str
+    data_source: DataSource
