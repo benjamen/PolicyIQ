@@ -23,12 +23,23 @@ spoofing, no stealth plugins. It is not expected to (and isn't meant to)
 get past a site's deliberate anti-automation controls (e.g. AIA's WAF,
 which resets the HTTP/2 stream before any static request even completes) -
 that's a different, out-of-scope problem this fallback doesn't touch.
+
+Also seeds each insurer's likely documents-hub page (registry.py's
+DEFAULT_DOCUMENT_HUB_PATHS) as additional start_urls, not just the
+homepage. Researched 2026-07-30: no NZ government registry exists for
+life/trauma/TPD/income-protection policy wordings (unlike KiwiSaver,
+which must file on the Companies Office Disclose Register) - each
+insurer's own site is genuinely the only source, and a homepage-rooted
+crawl alone can miss a real documents hub that isn't linked prominently
+from anywhere the homepage leads within DEPTH_LIMIT (confirmed: Asteron
+Life's /important-information page is real, live content, but wasn't
+reachable via link-following in this crawl's first real run).
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import scrapy
 
@@ -58,7 +69,11 @@ class PolicyDocumentSpider(scrapy.Spider):
             raise ValueError(f"Unknown insurer '{insurer}'. Known insurers: {known}")
 
         self.insurer_seed = matches[0]
-        self.start_urls = [self.insurer_seed.website_root]
+        hub_urls = [
+            urljoin(self.insurer_seed.website_root, path)
+            for path in self.insurer_seed.crawl_policy.document_hub_paths
+        ]
+        self.start_urls = [self.insurer_seed.website_root, *hub_urls]
         domain = urlparse(self.insurer_seed.website_root).netloc
         self.allowed_domains = [domain]
 

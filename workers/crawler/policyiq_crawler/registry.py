@@ -15,7 +15,12 @@ insurance, not life. Comparison/aggregator sites that surface in a "top N
 life insurers" search (LifeDirect, Glimp, Compare.org.nz, MoneyHub,
 Pinnacle Life's competitors listings, etc.) are brokers or aggregators, not
 insurers, and are deliberately excluded from this registry - they don't
-publish their own PDS/wording documents to crawl.
+publish their own PDS/wording documents to crawl (confirmed directly:
+LifeDirect's /compare/* pages are a client-side quote-rating tool requiring
+a filled-in form, not a document listing - there is nothing static to crawl
+there, and even if there were, citing a rival aggregator's summarized output
+instead of the insurer's own primary-source text would undermine this
+project's citation-verification design).
 
 The seven below are the major underwriters actually named across multiple
 independent market-overview sources as of mid-2026 (AIA, Partners Life,
@@ -25,11 +30,50 @@ the set requested for this slice). This list is a *starting seed*, not a
 claim of completeness - `discover_insurers()` below is where RBNZ-register
 cross-referencing gets wired in to grow it mechanically instead of by
 further hand-curation.
+
+No government registry exists for this document category (researched
+2026-07-30): unlike KiwiSaver/managed investment products, which must file
+on the Companies Office Disclose Register under the Financial Markets
+Conduct Act 2013, traditional life/trauma/TPD/income-protection insurance
+is an insurance contract, not a "financial product" in that Act's sense -
+confirmed directly against the Disclose Register's own stated scope
+("debt and equity securities, derivatives and managed investment products,
+and managed investment schemes"), which does not mention insurance at all.
+RBNZ's license register, the FSPR, and FMA's Conduct of Financial
+Institutions regime cover licensing/registration/fair-conduct-summary
+disclosure respectively - none require publishing policy wordings
+centrally, or even publicly. Industry submissions on the Contracts of
+Insurance Act 2024 explicitly noted some insurers have no publicly
+available wording at all ("only through application") - matching what this
+crawler found firsthand: Partners Life and Asteron Life's product pages
+both link only to a marketing brochure + claim form, never a full wording.
+Each insurer's own site is genuinely the only source; DEFAULT_DOCUMENT_HUB_
+PATHS below exists because of this - there's no registry shortcut, so the
+crawler has to go looking for each insurer's own documents hub directly.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+
+# Common URL patterns insurers use for a documents/disclosures hub page,
+# tried for every insurer in addition to homepage-rooted link-following -
+# seeded from real hits (asteronlife.co.nz/important-information returned
+# real content; partnerslife.co.nz/useful-documents did too, though it
+# turned out to hold claim forms, not policy wordings) plus patterns named
+# in industry sources (e.g. southerncrosslife.co.nz's since-moved
+# /Policy-wording page). A 404 for a path an insurer doesn't use is
+# harmless - Scrapy's default HttpErrorMiddleware just logs and drops it,
+# never reaches parse().
+DEFAULT_DOCUMENT_HUB_PATHS: tuple[str, ...] = (
+    "/policy-wording",
+    "/important-information",
+    "/useful-documents",
+    "/policy-documents",
+    "/product-disclosure-statements",
+    "/documents",
+    "/downloads",
+)
 
 
 @dataclass(frozen=True)
@@ -40,6 +84,7 @@ class CrawlPolicy:
 
     request_delay_seconds: float = 2.0
     allowed_paths: tuple[str, ...] = ("/",)
+    document_hub_paths: tuple[str, ...] = DEFAULT_DOCUMENT_HUB_PATHS
     blocked: bool = False
     contact_note: str = ""
 

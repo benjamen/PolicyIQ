@@ -1,6 +1,7 @@
 import scrapy
 
 from policyiq_crawler.items import DiscoveredDocumentItem
+from policyiq_crawler.registry import DEFAULT_DOCUMENT_HUB_PATHS
 from policyiq_crawler.spiders.policy_document_spider import PolicyDocumentSpider
 
 _URL = "https://www.partnerslife.co.nz/"
@@ -62,3 +63,18 @@ def test_zero_links_on_an_already_rendered_response_does_not_retrigger_playwrigh
     results = list(_spider().parse(response))
 
     assert results == []
+
+
+def test_start_urls_include_the_homepage_and_every_document_hub_path():
+    """No government registry cross-references policy wordings (researched
+    2026-07-30) - each insurer's own site is the only source, and a
+    homepage-rooted crawl alone can miss a real documents hub (confirmed:
+    Asteron Life's /important-information wasn't reachable via link-
+    following). So every insurer's likely hub paths get seeded directly,
+    not just the homepage."""
+    spider = _spider()
+
+    assert spider.start_urls[0] == "https://www.partnerslife.co.nz"
+    for path in DEFAULT_DOCUMENT_HUB_PATHS:
+        assert f"https://www.partnerslife.co.nz{path}" in spider.start_urls
+    assert len(spider.start_urls) == 1 + len(DEFAULT_DOCUMENT_HUB_PATHS)
