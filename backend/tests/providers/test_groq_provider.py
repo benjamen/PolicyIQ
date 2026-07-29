@@ -61,10 +61,10 @@ def test_extract_sends_bearer_auth_json_mode_and_schema_then_returns_content():
 
 
 def test_non_200_response_raises_value_error_not_a_crash():
-    client = _client_returning(429, {"error": "rate limited"})
+    client = _client_returning(500, {"error": "server error"})
     provider = GroqProvider("test-key", client=client)
 
-    with pytest.raises(ValueError, match="429"):
+    with pytest.raises(ValueError, match="500"):
         provider.extract(prompt="p", section_text="s", schema=SectionExtraction)
 
 
@@ -74,6 +74,71 @@ def test_malformed_response_body_raises_value_error():
 
     with pytest.raises(ValueError, match="unexpected response shape"):
         provider.extract(prompt="p", section_text="s", schema=SectionExtraction)
+
+
+def test_429_sleeps_the_hinted_duration_then_retries_and_succeeds():
+    """Real evidence from 2026-07-29: a 47-section batch blew through Groq's
+    free-tier TPM budget after ~4 calls, and every retry thereafter hit the
+    same still-exhausted window because nothing waited - this is the fix."""
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        if len(calls) == 1:
+            body = {"error": {"message": "Rate limit reached... Please try again in 12.5s.", "code": "rate_limit_exceeded"}}
+            return httpx.Response(429, json=body, request=request)
+        return httpx.Response(200, json={"choices": [{"message": {"content": _VALID_CONTENT}}]}, request=request)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    sleeps = []
+    provider = GroqProvider("test-key", client=client, sleep=sleeps.append)
+
+    raw = provider.extract(prompt="p", section_text="s", schema=SectionExtraction)
+
+    assert raw == _VALID_CONTENT
+    assert len(calls) == 2
+    assert sleeps == [12.5]
+
+
+def test_429_prefers_retry_after_header_over_the_message_hint():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            429,
+            headers={"retry-after": "7"},
+            json={"error": {"message": "Please try again in 99s."}},
+            request=request,
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    sleeps = []
+    provider = GroqProvider("test-key", client=client, sleep=sleeps.append, max_rate_limit_retries=1)
+
+    with pytest.raises(ValueError, match="429"):
+        provider.extract(prompt="p", section_text="s", schema=SectionExtraction)
+
+    assert sleeps == [7.0]
+
+
+def test_429_falls_back_to_a_default_wait_when_the_hint_is_unparseable():
+    client = _client_returning(429, {"error": "rate limited, no hint here"})
+    sleeps = []
+    provider = GroqProvider("test-key", client=client, sleep=sleeps.append, max_rate_limit_retries=1)
+
+    with pytest.raises(ValueError, match="429"):
+        provider.extract(prompt="p", section_text="s", schema=SectionExtraction)
+
+    assert sleeps == [15.0]
+
+
+def test_429_exhausts_retries_and_raises_a_clear_value_error():
+    client = _client_returning(429, {"error": {"message": "Please try again in 1s."}})
+    sleeps = []
+    provider = GroqProvider("test-key", client=client, sleep=sleeps.append, max_rate_limit_retries=3)
+
+    with pytest.raises(ValueError, match="429"):
+        provider.extract(prompt="p", section_text="s", schema=SectionExtraction)
+
+    assert sleeps == [1.0, 1.0, 1.0]
 
 
 def test_transport_error_is_normalized_to_value_error():

@@ -17,8 +17,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import time
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Callable, Literal, Protocol
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError
@@ -58,6 +60,15 @@ class MockLLMProvider:
         raise NotImplementedError("MockLLMProvider.embed: not exercised this pass (embeddings are out of scope)")
 
 
+# Groq's 429 body embeds a human-readable wait hint, e.g. "Please try again
+# in 13.25s." - real evidence from 2026-07-29: a 47-section real batch blew
+# through the free/on-demand tier's 12,000 TPM budget after ~4 calls, and
+# every retry thereafter hit the same still-exhausted window because nothing
+# waited before retrying - 3 instant attempts just fail 3 times in a row.
+_RATE_LIMIT_WAIT_RE = re.compile(r"try again in (\d+(?:\.\d+)?)s", re.IGNORECASE)
+_DEFAULT_RATE_LIMIT_WAIT_SECONDS = 15.0
+
+
 class GroqProvider:
     """Real LLMProvider backed by Groq's OpenAI-compatible chat completions
     API. JSON mode (`response_format: json_object`) only guarantees the
@@ -68,7 +79,14 @@ class GroqProvider:
     error, non-200 response, malformed response body) is normalized to a
     ValueError so extract_with_retry's existing except clause handles it
     the same way it handles a schema-invalid response, rather than crashing
-    the caller with an unhandled httpx exception."""
+    the caller with an unhandled httpx exception.
+
+    A 429 (rate limit) gets different treatment: it's retried *within* this
+    call, actually waiting out Groq's own hinted duration first - the free/
+    on-demand tier's per-minute token budget is small enough that a real
+    multi-section batch will hit it routinely, and retrying instantly (as
+    extract_with_retry's outer loop does for every other failure) just
+    re-hits the same still-exhausted window every time."""
 
     _API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
@@ -79,41 +97,64 @@ class GroqProvider:
         *,
         client: httpx.Client | None = None,
         timeout: float = 60.0,
+        max_rate_limit_retries: int = 5,
+        sleep: Callable[[float], None] = time.sleep,
     ):
         self._api_key = api_key
         self._model = model
         self._client = client or httpx.Client(timeout=timeout)
+        self._max_rate_limit_retries = max_rate_limit_retries
+        self._sleep = sleep
 
     def extract(self, *, prompt: str, section_text: str, schema: type[BaseModel]) -> str:
         system_message = (
             f"{prompt}\n\nRespond with valid JSON only, matching this JSON schema exactly:\n"
             f"{json.dumps(schema.model_json_schema())}"
         )
-        try:
-            resp = self._client.post(
-                self._API_URL,
-                headers={"Authorization": f"Bearer {self._api_key}", "Content-Type": "application/json"},
-                json={
-                    "model": self._model,
-                    "messages": [
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": section_text},
-                    ],
-                    "response_format": {"type": "json_object"},
-                    "temperature": 0,
-                },
-            )
-        except httpx.HTTPError as exc:
-            raise ValueError(f"GroqProvider: request to Groq API failed: {exc}") from exc
+        payload = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": section_text},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0,
+        }
+        headers = {"Authorization": f"Bearer {self._api_key}", "Content-Type": "application/json"}
 
-        if resp.status_code != 200:
-            raise ValueError(f"GroqProvider: Groq API returned {resp.status_code}: {resp.text[:500]}")
+        for attempt in range(self._max_rate_limit_retries + 1):
+            try:
+                resp = self._client.post(self._API_URL, headers=headers, json=payload)
+            except httpx.HTTPError as exc:
+                raise ValueError(f"GroqProvider: request to Groq API failed: {exc}") from exc
 
-        body = resp.json()
-        try:
-            return body["choices"][0]["message"]["content"]
-        except (KeyError, IndexError) as exc:
-            raise ValueError(f"GroqProvider: unexpected response shape: {body}") from exc
+            if resp.status_code == 429 and attempt < self._max_rate_limit_retries:
+                self._sleep(self._seconds_until_retry(resp))
+                continue
+
+            if resp.status_code != 200:
+                raise ValueError(f"GroqProvider: Groq API returned {resp.status_code}: {resp.text[:500]}")
+
+            body = resp.json()
+            try:
+                return body["choices"][0]["message"]["content"]
+            except (KeyError, IndexError) as exc:
+                raise ValueError(f"GroqProvider: unexpected response shape: {body}") from exc
+
+        raise AssertionError("unreachable")  # loop always returns or raises above
+
+    @staticmethod
+    def _seconds_until_retry(resp: httpx.Response) -> float:
+        retry_after = resp.headers.get("retry-after")
+        if retry_after is not None:
+            try:
+                return float(retry_after)
+            except ValueError:
+                pass
+        match = _RATE_LIMIT_WAIT_RE.search(resp.text)
+        if match:
+            return float(match.group(1))
+        return _DEFAULT_RATE_LIMIT_WAIT_SECONDS
 
     def answer(self, *, query: str, context_chunks: list[str]) -> str:
         raise NotImplementedError("GroqProvider.answer: not exercised this pass (search/Q&A is out of scope)")
