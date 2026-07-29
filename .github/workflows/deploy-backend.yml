@@ -36,8 +36,8 @@ jobs:
             set -e
             cd ~/PolicyIQ
             git fetch origin
-            git checkout claude/policyiq-nz-architecture-iaifgv
-            git pull origin claude/policyiq-nz-architecture-iaifgv
+            git checkout main
+            git pull origin main
             cd backend
             mkdir -p discovered
             # Written fresh every deploy from GitHub Actions secrets, never

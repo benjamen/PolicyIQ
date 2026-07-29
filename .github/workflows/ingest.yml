@@ -40,8 +40,8 @@ jobs:
             set -e
             cd ~/PolicyIQ
             git fetch origin
-            git checkout claude/policyiq-nz-architecture-iaifgv
-            git pull origin claude/policyiq-nz-architecture-iaifgv
+            git checkout main
+            git pull origin main
 
             # Dockerized (not a bare venv) specifically because Playwright's
             # Chromium needs OS-level shared libraries installed via
