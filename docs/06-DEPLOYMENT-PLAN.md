@@ -38,7 +38,28 @@ implemented today (fixture-backed `POST /api/v1/compare/life` + `/health`).
 `backend/railway.toml` is left in place but unused — a Railway account was considered first; if
 this VPS ever becomes unavailable, that config is still ready to connect as a fallback.
 
-Backend URL: `<pending — filled in once the first deploy is confirmed>`.
+**Backend URL: `http://77.37.87.141:8010`** — confirmed live and reachable (`/health` returns
+`{"status":"ok"}` from outside the VPS).
+
+**Hostinger firewall gotcha (worth recording):** this VPS has its own hPanel-level firewall,
+separate from and invisible to `ufw`/`docker ps` on the box itself. Creating a new ruleset
+(`Policyiq`, for port 8010) and marking it "Active" **replaced** the pre-existing `ERPNext
+Firewall` ruleset rather than layering on top of it — only one hPanel firewall is enforced per
+VPS at a time. This briefly took the production Frappe site offline (port 80/443 no longer
+allowed) until `ERPNext Firewall` was re-activated. Resolution: added the port 8010 rule directly
+into `ERPNext Firewall` instead of maintaining a separate `Policyiq` ruleset, so there is exactly
+one enforced firewall for this VPS going forward. **Anyone touching this VPS's hPanel firewall
+settings should assume "Active" means "replaces whatever was active before," not "adds to it."**
+
+**Known limitation — mixed content:** the mockup is served over HTTPS
+(`https://benjamen.github.io`) but this backend is plain HTTP (no domain/TLS yet, by design — see
+above). Browsers block HTTPS pages from fetching `http://` resources by default ("mixed content"),
+client-side, before CORS is even evaluated. This means `?live=1` does **not** yet work end-to-end
+from the public GitHub Pages mockup — it will show the fail-closed error card, correctly, since
+the request is blocked. It does work today from a non-HTTPS context (e.g. `site/index.html`
+opened via `file://` locally) with `?live=1&api_base=http://77.37.87.141:8010`. Closing this gap
+requires a real domain + TLS pointed at the backend — deliberately deferred (see above), and the
+next thing to pick up.
 
 ## Containers
 
