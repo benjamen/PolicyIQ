@@ -31,3 +31,18 @@ def test_corporate_comms_detected():
     insurance policy content."""
     assert classify("", "/documents/Asteron-Life-Investor-News-Issue-27.pdf") == "corporate_comms"
     assert classify("", "/documents/Whistleblowing-Policy-2025.pdf") == "corporate_comms"
+
+
+def test_investment_or_kiwisaver_takes_priority_over_pds():
+    """Real gap found crawling MAS (2026-07-31): a KiwiSaver Product
+    Disclosure Statement also contains the literal phrase "product
+    disclosure statement", which would otherwise match "pds" - dict
+    order must check out-of-vertical categories first."""
+    assert classify("", "/documents/639/MAS_KiwiSaver_Scheme_Product_Disclosure_Statement.pdf") == "investment_or_kiwisaver"
+
+
+def test_general_insurance_takes_priority_over_wording():
+    """Real gap found crawling MAS (2026-07-31): a Contents Insurance
+    Policy Document also contains the literal phrase "policy document",
+    which would otherwise match "wording"."""
+    assert classify("", "/documents/1103/MAS_Contents_Insurance_Policy_Document.pdf") == "general_insurance"

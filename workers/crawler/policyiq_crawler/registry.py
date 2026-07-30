@@ -93,7 +93,9 @@ DEFAULT_DOCUMENT_HUB_PATHS: tuple[str, ...] = (
 # confirmed via docker top + /proc's wchan/socket inspection that the
 # process was genuinely alive and network-active the whole time, not
 # hung; it was just real, wasted work on an irrelevant document.
-OUT_OF_SCOPE_DOC_TYPES: tuple[str, ...] = ("form", "annual_report", "corporate_comms")
+OUT_OF_SCOPE_DOC_TYPES: tuple[str, ...] = (
+    "form", "annual_report", "corporate_comms", "investment_or_kiwisaver", "general_insurance",
+)
 DEFAULT_EXCLUDED_PATH_SUBSTRINGS: tuple[str, ...] = ("/investments/",)
 
 
