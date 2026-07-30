@@ -60,40 +60,48 @@ class MockLLMProvider:
         raise NotImplementedError("MockLLMProvider.embed: not exercised this pass (embeddings are out of scope)")
 
 
-# Groq's 429 body embeds a human-readable wait hint, e.g. "Please try again
-# in 13.25s." - real evidence from 2026-07-29: a 47-section real batch blew
-# through the free/on-demand tier's 12,000 TPM budget after ~4 calls, and
-# every retry thereafter hit the same still-exhausted window because nothing
-# waited before retrying - 3 instant attempts just fail 3 times in a row.
+# Both Groq and NVIDIA NIM's 429 bodies embed a human-readable wait hint,
+# e.g. "Please try again in 13.25s." - real evidence from 2026-07-29: a
+# 47-section real batch blew through Groq's free/on-demand tier's 12,000
+# TPM budget after ~4 calls, and every retry thereafter hit the same
+# still-exhausted window because nothing waited before retrying - 3
+# instant attempts just fail 3 times in a row.
 _RATE_LIMIT_WAIT_RE = re.compile(r"try again in (\d+(?:\.\d+)?)s", re.IGNORECASE)
 _DEFAULT_RATE_LIMIT_WAIT_SECONDS = 15.0
 
 
-class GroqProvider:
-    """Real LLMProvider backed by Groq's OpenAI-compatible chat completions
-    API. JSON mode (`response_format: json_object`) only guarantees the
-    response is syntactically valid JSON, not that it matches `schema` -
-    so the schema is spelled out in the system message, and the real
-    enforcement stays where it already was: extract_with_retry()'s Pydantic
-    validation + reprompt-on-failure loop. Every failure mode (network
-    error, non-200 response, malformed response body) is normalized to a
-    ValueError so extract_with_retry's existing except clause handles it
-    the same way it handles a schema-invalid response, rather than crashing
-    the caller with an unhandled httpx exception.
+class _OpenAICompatibleChatProvider:
+    """Shared implementation for LLMProviders backed by an OpenAI-compatible
+    chat completions endpoint - Groq and NVIDIA NIM both are, so this is
+    the one real place the request/retry/parsing logic lives rather than
+    duplicated per vendor. Subclasses set `_API_URL` and their own default
+    model; everything else (JSON mode, rate-limit backoff, error handling)
+    is identical.
+
+    JSON mode (`response_format: json_object`) only guarantees the response
+    is syntactically valid JSON, not that it matches `schema` - so the
+    schema is spelled out in the system message, and the real enforcement
+    stays where it already was: extract_with_retry()'s Pydantic validation
+    + reprompt-on-failure loop. Every failure mode (network error, non-200
+    response, malformed response body) is normalized to a ValueError so
+    extract_with_retry's existing except clause handles it the same way it
+    handles a schema-invalid response, rather than crashing the caller with
+    an unhandled httpx exception.
 
     A 429 (rate limit) gets different treatment: it's retried *within* this
-    call, actually waiting out Groq's own hinted duration first - the free/
-    on-demand tier's per-minute token budget is small enough that a real
-    multi-section batch will hit it routinely, and retrying instantly (as
-    extract_with_retry's outer loop does for every other failure) just
-    re-hits the same still-exhausted window every time."""
+    call, actually waiting out the vendor's own hinted duration first -
+    Groq's free/on-demand tier's per-minute token budget is small enough
+    that a real multi-section batch hits it routinely, and retrying
+    instantly (as extract_with_retry's outer loop does for every other
+    failure) just re-hits the same still-exhausted window every time."""
 
-    _API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    _API_URL: str = ""
+    _PROVIDER_NAME: str = "LLMProvider"
 
     def __init__(
         self,
         api_key: str,
-        model: str = "llama-3.3-70b-versatile",
+        model: str,
         *,
         client: httpx.Client | None = None,
         timeout: float = 60.0,
@@ -126,20 +134,20 @@ class GroqProvider:
             try:
                 resp = self._client.post(self._API_URL, headers=headers, json=payload)
             except httpx.HTTPError as exc:
-                raise ValueError(f"GroqProvider: request to Groq API failed: {exc}") from exc
+                raise ValueError(f"{self._PROVIDER_NAME}: request failed: {exc}") from exc
 
             if resp.status_code == 429 and attempt < self._max_rate_limit_retries:
                 self._sleep(self._seconds_until_retry(resp))
                 continue
 
             if resp.status_code != 200:
-                raise ValueError(f"GroqProvider: Groq API returned {resp.status_code}: {resp.text[:500]}")
+                raise ValueError(f"{self._PROVIDER_NAME}: API returned {resp.status_code}: {resp.text[:500]}")
 
             body = resp.json()
             try:
                 return body["choices"][0]["message"]["content"]
             except (KeyError, IndexError) as exc:
-                raise ValueError(f"GroqProvider: unexpected response shape: {body}") from exc
+                raise ValueError(f"{self._PROVIDER_NAME}: unexpected response shape: {body}") from exc
 
         raise AssertionError("unreachable")  # loop always returns or raises above
 
@@ -157,25 +165,61 @@ class GroqProvider:
         return _DEFAULT_RATE_LIMIT_WAIT_SECONDS
 
     def answer(self, *, query: str, context_chunks: list[str]) -> str:
-        raise NotImplementedError("GroqProvider.answer: not exercised this pass (search/Q&A is out of scope)")
+        raise NotImplementedError(f"{self._PROVIDER_NAME}.answer: not exercised this pass (search/Q&A is out of scope)")
 
     def embed(self, *, text: str) -> list[float]:
-        raise NotImplementedError("GroqProvider.embed: not exercised this pass (embeddings are out of scope)")
+        raise NotImplementedError(f"{self._PROVIDER_NAME}.embed: not exercised this pass (embeddings are out of scope)")
+
+
+class GroqProvider(_OpenAICompatibleChatProvider):
+    """Groq's chat completions API - see the base class docstring for the
+    shared request/retry/parsing behaviour."""
+
+    _API_URL = "https://api.groq.com/openai/v1/chat/completions"
+    _PROVIDER_NAME = "GroqProvider"
+
+    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile", **kwargs):
+        super().__init__(api_key, model, **kwargs)
+
+
+class NvidiaProvider(_OpenAICompatibleChatProvider):
+    """NVIDIA NIM's chat completions API (integrate.api.nvidia.com) - also
+    OpenAI-compatible, added as an alternative to Groq's free-tier rate
+    limits (see GroqProvider / groq-rate-limit-backoff in the policyiq-ops
+    wiki). See the base class docstring for the shared request/retry/
+    parsing behaviour."""
+
+    _API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+    _PROVIDER_NAME = "NvidiaProvider"
+
+    def __init__(self, api_key: str, model: str = "meta/llama-3.3-70b-instruct", **kwargs):
+        super().__init__(api_key, model, **kwargs)
 
 
 def get_provider() -> LLMProvider | None:
-    """Reads LLM_PROVIDER/LLM_KEY/LLM_MODEL from the environment (see
-    .env.example). Returns None - never a default/mock - when unconfigured,
-    so callers (run_ingest.py) must handle "no provider" explicitly rather
-    than silently extracting with something that can't handle real text."""
+    """Reads LLM_PROVIDER/LLM_MODEL plus a provider-specific API key from
+    the environment (see .env.example). Groq uses LLM_KEY; NVIDIA NIM uses
+    NVIDIA_LLM_KEY (falling back to LLM_KEY if unset) - kept as separate
+    secrets rather than one shared LLM_KEY so both providers can stay
+    configured side-by-side and LLM_PROVIDER alone picks which one runs.
+    Returns None - never a default/mock - when unconfigured, so callers
+    (run_ingest.py) must handle "no provider" explicitly rather than
+    silently extracting with something that can't handle real text."""
     provider_name = os.environ.get("LLM_PROVIDER")
-    api_key = os.environ.get("LLM_KEY")
-    if not provider_name or not api_key:
+    if not provider_name:
         return None
+    model = os.environ.get("LLM_MODEL") or None
     if provider_name == "groq":
-        model = os.environ.get("LLM_MODEL") or "llama-3.3-70b-versatile"
-        return GroqProvider(api_key, model=model)
-    raise ValueError(f"Unknown LLM_PROVIDER: {provider_name!r} (supported: 'groq')")
+        api_key = os.environ.get("LLM_KEY")
+        if not api_key:
+            return None
+        return GroqProvider(api_key, **({"model": model} if model else {}))
+    if provider_name == "nvidia":
+        api_key = os.environ.get("NVIDIA_LLM_KEY") or os.environ.get("LLM_KEY")
+        if not api_key:
+            return None
+        return NvidiaProvider(api_key, **({"model": model} if model else {}))
+    raise ValueError(f"Unknown LLM_PROVIDER: {provider_name!r} (supported: 'groq', 'nvidia')")
 
 
 class GradedFactExtract(BaseModel):

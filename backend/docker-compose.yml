@@ -21,6 +21,11 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-}
       - LLM_KEY=${LLM_KEY:-}
       - LLM_MODEL=${LLM_MODEL:-}
+      # Separate from LLM_KEY on purpose - NVIDIA NIM (an alternative to
+      # Groq's free-tier rate limit) stays configured side-by-side rather
+      # than overwriting Groq's key; get_provider() picks the right one
+      # based on LLM_PROVIDER.
+      - NVIDIA_LLM_KEY=${NVIDIA_LLM_KEY:-}
     volumes:
       - policyiq-data:/app/data
       # Downloaded documents (app/storage/local_disk.py's default root) -

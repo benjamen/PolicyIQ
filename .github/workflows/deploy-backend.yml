@@ -27,11 +27,12 @@ jobs:
           LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
           LLM_KEY: ${{ secrets.LLM_KEY }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          NVIDIA_LLM_KEY: ${{ secrets.NVIDIA_LLM_KEY }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: LLM_PROVIDER,LLM_KEY,LLM_MODEL
+          envs: LLM_PROVIDER,LLM_KEY,LLM_MODEL,NVIDIA_LLM_KEY
           script: |
             set -e
             cd ~/PolicyIQ
@@ -48,6 +49,7 @@ jobs:
             LLM_PROVIDER=${LLM_PROVIDER}
             LLM_KEY=${LLM_KEY}
             LLM_MODEL=${LLM_MODEL}
+            NVIDIA_LLM_KEY=${NVIDIA_LLM_KEY}
             ENVEOF
             # Reclaim disk from prior builds' dangling images and stale
             # BuildKit cache before building again - docling/torch's large

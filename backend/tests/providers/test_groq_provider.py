@@ -148,7 +148,7 @@ def test_transport_error_is_normalized_to_value_error():
     client = httpx.Client(transport=httpx.MockTransport(handler))
     provider = GroqProvider("test-key", client=client)
 
-    with pytest.raises(ValueError, match="request to Groq API failed"):
+    with pytest.raises(ValueError, match="GroqProvider: request failed"):
         provider.extract(prompt="p", section_text="s", schema=SectionExtraction)
 
 
