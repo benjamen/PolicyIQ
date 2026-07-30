@@ -15,6 +15,7 @@ LLM-invented, per docs/05-AI-EXTRACTION-STRATEGY.md.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -58,6 +59,48 @@ class MockLLMProvider:
 
     def embed(self, *, text: str) -> list[float]:
         raise NotImplementedError("MockLLMProvider.embed: not exercised this pass (embeddings are out of scope)")
+
+
+class PrecomputedProvider:
+    """LLMProvider backed by extractions authored ahead of time rather than
+    a live API call - built for a one-off local backfill (2026-07-30:
+    NVIDIA NIM's free-tier RPM limit throttled a large real batch hard, see
+    the groq-rate-limit-backoff/policyiq-ops wiki entry for the same
+    problem on Groq) where a person or Claude Code works through
+    dump_sections_for_review.py's dumped section text directly and
+    authors the SectionExtraction JSON by hand, instead of paying a
+    rate-limited API's per-minute cost for a large backlog.
+
+    Keyed on a hash of the exact `section_text` extract() receives, not a
+    section/document ID - process_section()/extract_with_retry() only ever
+    pass prompt/section_text/schema to extract() (confirmed directly by
+    reading both), so hashing what's actually available keeps this a
+    drop-in LLMProvider without changing that shared interface or
+    touching the citation-verification pipeline at all. A section with no
+    authored entry raises - fail-closed, matching MockLLMProvider's own
+    "no silent pass on an unconfigured section" behaviour."""
+
+    def __init__(self, extractions_by_section_hash: dict[str, str]):
+        self._extractions = extractions_by_section_hash
+
+    @staticmethod
+    def section_key(section_text: str) -> str:
+        return hashlib.sha256(section_text.encode("utf-8")).hexdigest()
+
+    def extract(self, *, prompt: str, section_text: str, schema: type[BaseModel]) -> str:
+        key = self.section_key(section_text)
+        if key not in self._extractions:
+            raise ValueError(
+                f"PrecomputedProvider: no authored extraction for section hash {key[:12]}... "
+                f"(text starts: {section_text[:100]!r})"
+            )
+        return self._extractions[key]
+
+    def answer(self, *, query: str, context_chunks: list[str]) -> str:
+        raise NotImplementedError("PrecomputedProvider.answer: not exercised this pass (search/Q&A is out of scope)")
+
+    def embed(self, *, text: str) -> list[float]:
+        raise NotImplementedError("PrecomputedProvider.embed: not exercised this pass (embeddings are out of scope)")
 
 
 # Both Groq and NVIDIA NIM's 429 bodies embed a human-readable wait hint,
