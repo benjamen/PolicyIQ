@@ -35,11 +35,18 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           envs: INSURER,PRODUCT_TYPE
-          # Real evidence 2026-07-29: Asteron Life's site alone had 200+
-          # pages within DEPTH_LIMIT and was still crawling past 20 minutes -
-          # 30m cut it off mid-run (not mid-crash; it was making real
-          # progress). Insurer sites vary a lot in size.
-          command_timeout: 60m
+          # Real evidence 2026-07-29/30: Asteron Life's site alone had 200+
+          # pages within DEPTH_LIMIT (30m cut off a real, still-progressing
+          # crawl), and separately, its larger real document set combined
+          # with Groq's free-tier rate limit (extract_with_retry now waits
+          # out each 429 rather than failing fast - see
+          # app/providers/llm.py's GroqProvider) meant 60m wasn't enough
+          # for extraction either, even with no single document hanging -
+          # confirmed via docker top showing no stuck subprocess, just a
+          # long, real, cumulative wait. Insurer sites vary a lot in size;
+          # this is the tradeoff of respecting the rate limit rather than
+          # failing fast.
+          command_timeout: 120m
           script: |
             set -e
             cd ~/PolicyIQ
@@ -78,5 +85,12 @@ jobs:
 
             cd ../../backend
             echo "=== downloading + OCR + sections (extraction only if LLM_PROVIDER/LLM_KEY are set) ==="
-            docker compose exec -T policyiq-backend python -m app.pipeline.run_ingest \
+            # -u (unbuffered): real evidence 2026-07-30 - a run that hit the
+            # SSH timeout produced zero visible output for 49 minutes,
+            # because Python block-buffers stdout when not attached to a
+            # TTY (docker compose exec -T). Whatever was actually happening
+            # (successes, per-document FAILED lines, Docling timeouts) was
+            # invisible the whole time. -u makes every print appear as it
+            # happens instead of only at process exit.
+            docker compose exec -T policyiq-backend python -u -m app.pipeline.run_ingest \
               --input "discovered/${SLUG}.jsonl" --product-type "$PRODUCT_TYPE"
