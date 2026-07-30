@@ -19,6 +19,7 @@ PATTERNS: dict[str, tuple[str, ...]] = {
     "form": ("application form", "claim form", "change of details"),
     "renewal_doc": ("renewal notice", "renewal terms"),
     "faq": ("frequently asked questions", "faq"),
+    "annual_report": ("annual report", "annual statement", "investor report"),
 }
 
 _SEPARATORS = str.maketrans("-_/", "   ")

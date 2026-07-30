@@ -73,6 +73,22 @@ def test_claim_forms_are_flagged_out_of_scope_not_dropped():
     assert items[0].get("in_scope") is False
 
 
+def test_annual_reports_are_flagged_out_of_scope_not_dropped():
+    """Real noise hit crawling Fidelity Life (2026-07-30): an annual
+    report PDF has zero policy content but is expensive to download/OCR/
+    extract - a 45+ minute real run confirmed via docker top + /proc
+    inspection to be genuinely churning through one, not hung."""
+    body = '<html><body><a href="/media/xyz/fidelity-life-annual-report-2024.pdf">Fidelity Life Annual Report</a></body></html>'
+    response = _make_response(body)
+
+    results = list(_spider().parse(response))
+    items = [r for r in results if isinstance(r, DiscoveredDocumentItem)]
+
+    assert len(items) == 1
+    assert items[0].get("doc_type_guess") == "annual_report"
+    assert items[0].get("in_scope") is False
+
+
 def test_known_noise_paths_are_flagged_out_of_scope_not_dropped():
     """Real noise hit crawling Asteron Life (2026-07-29): a large archive
     of old investment/superannuation fund documents under /investments/ -

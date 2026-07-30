@@ -86,7 +86,14 @@ DEFAULT_DOCUMENT_HUB_PATHS: tuple[str, ...] = (
 # at discovery time - still recorded for visibility (docs/04-CRAWLER-
 # STRATEGY.md's "route to review, don't guess silently" principle applies
 # here too), just skipped by run_ingest.py's download/OCR/extraction spend.
-OUT_OF_SCOPE_DOC_TYPES: tuple[str, ...] = ("form",)
+#
+# "annual_report" added 2026-07-30: real Fidelity Life crawl spent 45+
+# minutes downloading/OCRing/extracting a multi-page annual report PDF
+# (zero policy content) while chasing the known_document_urls fix -
+# confirmed via docker top + /proc's wchan/socket inspection that the
+# process was genuinely alive and network-active the whole time, not
+# hung; it was just real, wasted work on an irrelevant document.
+OUT_OF_SCOPE_DOC_TYPES: tuple[str, ...] = ("form", "annual_report")
 DEFAULT_EXCLUDED_PATH_SUBSTRINGS: tuple[str, ...] = ("/investments/",)
 
 
