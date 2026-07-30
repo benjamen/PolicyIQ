@@ -122,26 +122,58 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
 
         facts_by_category = {f.category: f for f in graded_facts}
 
+        # Citation verification (app/verification.py) only checks that a
+        # fact's source_quote is a real quote from the text - it says
+        # nothing about whether raw_value actually matches the controlled
+        # vocabulary/format its category promises. Real evidence
+        # (2026-07-30): a real Groq-extracted tpd_definition fact had
+        # raw_value="Paralysis (loss of everything)" - a real phrase from
+        # the document, correctly cited, but not a valid TpdBasis member -
+        # and TpdBasis(fact.raw_value) 500'd this endpoint for every
+        # insurer/product, not just the one malformed fact. Every parse
+        # below is now defensive: a malformed fact is dropped (logged) and
+        # treated as absent, matching the same "missing fact is excluded,
+        # not penalized" handling as a fact that was never extracted at
+        # all - one bad fact must never take down the whole response.
+
         tpd_definition = None
         if (fact := facts_by_category.get("tpd_definition")) is not None:
-            tpd_definition = TpdDefinition(
-                basis=TpdBasis(fact.raw_value), source=_source_ref(insurer.name, fact, documents_by_id)
-            )
+            try:
+                tpd_definition = TpdDefinition(
+                    basis=TpdBasis(fact.raw_value), source=_source_ref(insurer.name, fact, documents_by_id)
+                )
+            except ValueError:
+                logger.warning(
+                    "skipping malformed tpd_definition GradedFact %s (%s / %s): raw_value=%r is not a valid TpdBasis",
+                    fact.id, insurer.name, policy.name, fact.raw_value,
+                )
 
         trauma_condition_count = None
         trauma_condition_source = None
         if (fact := facts_by_category.get("trauma_conditions")) is not None:
-            trauma_condition_count = int(fact.raw_value)
-            trauma_condition_source = _source_ref(insurer.name, fact, documents_by_id)
+            try:
+                trauma_condition_count = int(fact.raw_value)
+                trauma_condition_source = _source_ref(insurer.name, fact, documents_by_id)
+            except ValueError:
+                logger.warning(
+                    "skipping malformed trauma_conditions GradedFact %s (%s / %s): raw_value=%r is not an int",
+                    fact.id, insurer.name, policy.name, fact.raw_value,
+                )
 
         premium_structure = None
         if (fact := facts_by_category.get("premium_structure")) is not None:
-            payload = json.loads(fact.raw_value)
-            premium_structure = PremiumStructure(
-                basis=PremiumBasis(payload["basis"]),
-                guaranteed=bool(payload["guaranteed"]),
-                source=_source_ref(insurer.name, fact, documents_by_id),
-            )
+            try:
+                payload = json.loads(fact.raw_value)
+                premium_structure = PremiumStructure(
+                    basis=PremiumBasis(payload["basis"]),
+                    guaranteed=bool(payload["guaranteed"]),
+                    source=_source_ref(insurer.name, fact, documents_by_id),
+                )
+            except (json.JSONDecodeError, KeyError, ValueError):
+                logger.warning(
+                    "skipping malformed premium_structure GradedFact %s (%s / %s): raw_value=%r",
+                    fact.id, insurer.name, policy.name, fact.raw_value,
+                )
 
         waiver_of_premium = None
         waiver_of_premium_source = None
@@ -152,8 +184,14 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
         automatic_benefits_count = None
         automatic_benefits_source = None
         if (fact := facts_by_category.get("automatic_benefits")) is not None:
-            automatic_benefits_count = int(fact.raw_value)
-            automatic_benefits_source = _source_ref(insurer.name, fact, documents_by_id)
+            try:
+                automatic_benefits_count = int(fact.raw_value)
+                automatic_benefits_source = _source_ref(insurer.name, fact, documents_by_id)
+            except ValueError:
+                logger.warning(
+                    "skipping malformed automatic_benefits GradedFact %s (%s / %s): raw_value=%r is not an int",
+                    fact.id, insurer.name, policy.name, fact.raw_value,
+                )
 
         profiles.append(
             ProductProfile(

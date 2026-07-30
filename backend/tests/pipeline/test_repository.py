@@ -59,6 +59,43 @@ def test_hydrates_profile_from_graded_facts_and_eligibility(session):
     assert profile.trauma_condition_count is None  # never extracted - excluded, not zeroed
 
 
+def test_malformed_graded_fact_is_skipped_not_a_500(session):
+    """Real production bug (2026-07-30): a real Groq-extracted tpd_definition
+    fact had raw_value="Paralysis (loss of everything)" - a real, correctly-
+    cited phrase from the document, but not a valid TpdBasis member.
+    TpdBasis(fact.raw_value) 500'd /api/v1/compare/life for every insurer,
+    not just the one malformed fact. A malformed fact must be dropped and
+    logged, not crash the whole response - matching the same "missing fact
+    is excluded, not penalized" handling as a fact that was never
+    extracted at all."""
+    pv = _make_policy_version(session)
+    session.add(EligibilityRule(policy_version_id=pv.id, age_min=18, age_max=65, smoker_status="any"))
+    session.add(GradedFact(
+        policy_version_id=pv.id, category="tpd_definition",
+        raw_value="Paralysis (loss of everything)",  # not a real TpdBasis value
+        page=1, paragraph_ref="1.1", confidence=0.9,
+    ))
+    session.add(GradedFact(
+        policy_version_id=pv.id, category="trauma_conditions", raw_value="not-an-int",
+        page=2, paragraph_ref="2.1", confidence=0.9,
+    ))
+    session.add(GradedFact(
+        policy_version_id=pv.id, category="premium_structure", raw_value="not valid json at all",
+        page=3, paragraph_ref="3.1", confidence=0.9,
+    ))
+    session.commit()
+
+    profiles = load_product_profiles(session, product_type="life_cover")
+
+    assert len(profiles) == 1
+    profile = profiles[0]
+    assert profile.tpd_definition is None
+    assert profile.trauma_condition_count is None
+    assert profile.premium_structure is None
+    # The rest of the profile (eligibility, etc.) is still hydrated correctly.
+    assert profile.eligibility.age_min == 18
+
+
 def test_policy_version_without_general_eligibility_rule_is_excluded(session):
     pv = _make_policy_version(session)
     # No general EligibilityRule row at all for this policy_version.
