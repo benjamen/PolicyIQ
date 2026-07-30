@@ -19,4 +19,12 @@ COPY . .
 # (see .github/workflows/ingest.yml) - never baked in, so one image serves
 # every insurer in the registry. OUTFILE should point under /app/discovered,
 # bind-mounted to the host path run_ingest.py reads from.
-ENTRYPOINT ["sh", "-c", "scrapy crawl policy_documents -a insurer=\"$INSURER\" -o \"$OUTFILE\""]
+#
+# -O (capital, overwrite), not -o (append): real bug found 2026-07-30 -
+# lowercase -o appends to an existing OUTFILE rather than replacing it, so
+# every re-run of the same insurer silently doubled up the discovered
+# file's content on top of whatever a previous (possibly broken, possibly
+# stale) run had already written - confirmed directly, a file that should
+# have held one clean crawl's ~58 items held 116 after a second dispatch.
+# A fresh crawl should always fully replace what it discovers.
+ENTRYPOINT ["sh", "-c", "scrapy crawl policy_documents -a insurer=\"$INSURER\" -O \"$OUTFILE\""]
