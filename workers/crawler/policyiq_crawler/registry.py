@@ -162,7 +162,24 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
             # _is_within_allowed_paths in the spider for the real evidence
             # (600+ candidates, 518 under /content/dam/.../us-en/, within
             # an unrestricted crawl's first few minutes).
-            allowed_paths=("/nz-en/", "/content/dam/chubb-sites/chubb-com/nz-en/"),
+            #
+            # Two DAM site keys, not one - found 2026-07-31 re-reviewing
+            # this insurer's own dumped section text: Chubb NZ's general/
+            # commercial products (property, travel, cyber, aviation,
+            # liability) publish under .../chubb-sites/chubb-com/nz-en/,
+            # but its actual retail life insurance business ("Life and
+            # Living Insurance" - life cover, critical illness cover,
+            # income/expenses cover) publishes under the sibling
+            # .../chubb-sites/chubb/nz-en/ path instead (no "-com"). The
+            # first allowed_paths fix (chubb-com only) wrongly excluded
+            # every real life-insurance document as a result - confirmed
+            # directly against /nz-en/life/life-and-living/expenses-
+            # cover.html's real PDF links.
+            allowed_paths=(
+                "/nz-en/",
+                "/content/dam/chubb-sites/chubb-com/nz-en/",
+                "/content/dam/chubb-sites/chubb/nz-en/",
+            ),
         ),
     ),
     InsurerSeed("MAS (Medical Assurance Society)", "https://www.mas.co.nz"),
