@@ -78,6 +78,46 @@ def test_first_run_creates_insurer_product_policy_and_sections_but_skips_extract
     assert session.execute(select(GradedFact)).scalars().first() is None
 
 
+def test_out_of_scope_documents_are_counted_and_skipped_not_downloaded(
+    session, tmp_path, synthetic_pdf_bytes
+):
+    """The crawler flags claim forms / old investment-fund archives as
+    in_scope=False rather than dropping them (still visible in the crawl
+    output) - run_ingest.py must skip them before spending any download/
+    OCR/LLM time, while still counting them for visibility."""
+    input_path = _write_jsonl(tmp_path / "asteron.jsonl", [
+        {
+            "insurer": "Asteron Life",
+            "source_page_url": "https://asteronlife.co.nz/claims",
+            "document_url": "https://asteronlife.co.nz/claim-form.pdf",
+            "link_text": "Claim Form",
+            "doc_type_guess": "form",
+            "in_scope": False,
+        },
+        {
+            "insurer": "Asteron Life",
+            "source_page_url": "https://asteronlife.co.nz/life-cover",
+            "document_url": "https://asteronlife.co.nz/pds.pdf",
+            "link_text": "Download brochure",
+            "doc_type_guess": "brochure",
+            "in_scope": True,
+        },
+    ])
+    # No entry for claim-form.pdf - FakeFetcher would KeyError if run_ingest
+    # ever actually tried to fetch it, proving the skip is real.
+    fetcher = FakeFetcher({"https://asteronlife.co.nz/pds.pdf": ("etag-v1", None, synthetic_pdf_bytes)})
+    storage = LocalDiskStorage(tmp_path / "storage")
+
+    stats = run_ingest(
+        input_path, product_type="life_cover",
+        session=session, fetcher=fetcher, storage=storage, provider=None,
+    )
+
+    assert stats.rows_seen == 2
+    assert stats.documents_out_of_scope == 1
+    assert stats.documents_downloaded == 1
+
+
 def test_one_bad_document_does_not_sink_the_rest_of_the_batch(
     session, tmp_path, synthetic_pdf_bytes, monkeypatch
 ):

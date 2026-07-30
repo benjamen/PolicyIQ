@@ -35,10 +35,44 @@ def test_extracts_pdf_links_and_follows_same_domain_links_only():
 
     assert len(items) == 1
     assert items[0].get("document_url") == "https://www.partnerslife.co.nz/policies/life-pds.pdf"
+    assert items[0].get("in_scope") is True
 
     # Only the same-domain, non-PDF link gets followed - the external one does not.
     assert len(requests) == 1
     assert requests[0].url == "https://www.partnerslife.co.nz/about"
+
+
+def test_claim_forms_are_flagged_out_of_scope_not_dropped():
+    """Claim/application forms are real, correctly-discovered documents -
+    just not useful for comparing coverage terms. Flagged, still yielded."""
+    body = '<html><body><a href="/forms/life-claim-form.pdf">Life Claim Form</a></body></html>'
+    response = _make_response(body)
+
+    results = list(_spider().parse(response))
+    items = [r for r in results if isinstance(r, DiscoveredDocumentItem)]
+
+    assert len(items) == 1
+    assert items[0].get("doc_type_guess") == "form"
+    assert items[0].get("in_scope") is False
+
+
+def test_known_noise_paths_are_flagged_out_of_scope_not_dropped():
+    """Real noise hit crawling Asteron Life (2026-07-29): a large archive
+    of old investment/superannuation fund documents under /investments/ -
+    live, real documents, just irrelevant to this vertical slice."""
+    body = (
+        '<html><body>'
+        '<a href="/sites/default/files/documents/investments/some-fund-2019.pdf">'
+        'Some Fund Annual Report</a>'
+        '</body></html>'
+    )
+    response = _make_response(body)
+
+    results = list(_spider().parse(response))
+    items = [r for r in results if isinstance(r, DiscoveredDocumentItem)]
+
+    assert len(items) == 1
+    assert items[0].get("in_scope") is False
 
 
 def test_zero_links_on_a_static_response_retries_with_playwright():

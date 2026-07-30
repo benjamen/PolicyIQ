@@ -105,6 +105,7 @@ class IngestStats:
     documents_downloaded: int = 0
     documents_unchanged: int = 0
     documents_failed: int = 0
+    documents_out_of_scope: int = 0
     sections_built: int = 0
     extraction_skipped_no_provider: bool = False
 
@@ -128,6 +129,16 @@ def run_ingest(
             row = json.loads(line)
             stats.rows_seen += 1
             document_url = row["document_url"]
+
+            # Flagged by the crawler (claim forms, old investment-fund
+            # archives - see workers/crawler/policyiq_crawler/registry.py),
+            # not dropped at discovery time - still counted here for
+            # visibility, just skipped before spending any download/OCR/LLM
+            # time on it. Missing key (older crawl output) defaults to
+            # in-scope, matching this project's prior behavior.
+            if row.get("in_scope", True) is False:
+                stats.documents_out_of_scope += 1
+                continue
 
             try:
                 insurer_name = row["insurer"]
@@ -221,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"rows_seen={stats.rows_seen} documents_downloaded={stats.documents_downloaded} "
         f"documents_unchanged={stats.documents_unchanged} documents_failed={stats.documents_failed} "
-        f"sections_built={stats.sections_built}"
+        f"documents_out_of_scope={stats.documents_out_of_scope} sections_built={stats.sections_built}"
     )
     if stats.extraction_skipped_no_provider:
         print("extraction skipped: LLM_PROVIDER/LLM_KEY not set (see .env.example, app/providers/llm.py)")

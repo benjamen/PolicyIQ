@@ -75,6 +75,20 @@ DEFAULT_DOCUMENT_HUB_PATHS: tuple[str, ...] = (
     "/downloads",
 )
 
+# Real noise hit crawling Asteron Life (2026-07-29): hub-path seeding found
+# a large archive of old (2017-2019) investment/superannuation fund annual
+# reports and fact sheets under /already-customer/investments - a real,
+# live page, but irrelevant to this vertical slice (life/trauma/TPD/income-
+# protection cover, not investment-linked products), and expensive to
+# download+OCR+extract for no benefit. "form" (claim/application forms) is
+# out of scope for the same reason: useful to a claimant, not to comparing
+# coverage terms. Flagged via DiscoveredDocumentItem.in_scope, not dropped
+# at discovery time - still recorded for visibility (docs/04-CRAWLER-
+# STRATEGY.md's "route to review, don't guess silently" principle applies
+# here too), just skipped by run_ingest.py's download/OCR/extraction spend.
+OUT_OF_SCOPE_DOC_TYPES: tuple[str, ...] = ("form",)
+DEFAULT_EXCLUDED_PATH_SUBSTRINGS: tuple[str, ...] = ("/investments/",)
+
 
 @dataclass(frozen=True)
 class CrawlPolicy:
@@ -85,6 +99,7 @@ class CrawlPolicy:
     request_delay_seconds: float = 2.0
     allowed_paths: tuple[str, ...] = ("/",)
     document_hub_paths: tuple[str, ...] = DEFAULT_DOCUMENT_HUB_PATHS
+    excluded_path_substrings: tuple[str, ...] = DEFAULT_EXCLUDED_PATH_SUBSTRINGS
     blocked: bool = False
     contact_note: str = ""
 

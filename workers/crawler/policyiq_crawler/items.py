@@ -13,3 +13,11 @@ class DiscoveredDocumentItem(scrapy.Item):
     link_text = scrapy.Field()
     doc_type_guess = scrapy.Field()  # pds | wording | brochure | claims_guide | form | unknown
     discovered_at = scrapy.Field()
+    # Flagged, not dropped (docs/04-CRAWLER-STRATEGY.md's "route to review
+    # rather than guess silently" principle applies here too): False for
+    # doc types/paths this vertical slice doesn't need (claim forms, old
+    # investment-fund archives - see registry.py's OUT_OF_SCOPE_DOC_TYPES/
+    # excluded_path_substrings), so run_ingest.py can skip spending
+    # download/OCR/LLM time on them while the crawl output still records
+    # that they exist, for visibility.
+    in_scope = scrapy.Field()

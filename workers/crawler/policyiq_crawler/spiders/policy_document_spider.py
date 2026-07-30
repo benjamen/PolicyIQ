@@ -34,6 +34,15 @@ crawl alone can miss a real documents hub that isn't linked prominently
 from anywhere the homepage leads within DEPTH_LIMIT (confirmed: Asteron
 Life's /important-information page is real, live content, but wasn't
 reachable via link-following in this crawl's first real run).
+
+That same run also surfaced real noise: hub-path seeding found a large
+archive of old (2017-2019) investment/superannuation fund documents that
+have nothing to do with life/trauma/TPD/income-protection cover. Every
+discovered document now carries an `in_scope` flag (registry.py's
+OUT_OF_SCOPE_DOC_TYPES/excluded_path_substrings) - flagged, not dropped
+at discovery time (still visible in the crawl output), so downstream
+processing can skip spending download/OCR/LLM time on documents this
+vertical slice doesn't need.
 """
 
 from __future__ import annotations
@@ -45,7 +54,7 @@ import scrapy
 
 from policyiq_crawler.doctype import classify
 from policyiq_crawler.items import DiscoveredDocumentItem
-from policyiq_crawler.registry import discover_insurers
+from policyiq_crawler.registry import OUT_OF_SCOPE_DOC_TYPES, discover_insurers
 
 
 class PolicyDocumentSpider(scrapy.Spider):
@@ -118,13 +127,27 @@ class PolicyDocumentSpider(scrapy.Spider):
             absolute_url = response.urljoin(href)
 
             if absolute_url.lower().endswith(".pdf") or "content-type" in href.lower():
+                doc_type_guess = classify(text, absolute_url)
                 yield DiscoveredDocumentItem(
                     insurer=self.insurer_seed.name,
                     source_page_url=response.url,
                     document_url=absolute_url,
                     link_text=text,
-                    doc_type_guess=classify(text, absolute_url),
+                    doc_type_guess=doc_type_guess,
                     discovered_at=datetime.now(timezone.utc).isoformat(),
+                    in_scope=self._is_in_scope(doc_type_guess, absolute_url),
                 )
             elif urlparse(absolute_url).netloc == self.allowed_domains[0]:
                 yield response.follow(absolute_url, callback=self.parse)
+
+    def _is_in_scope(self, doc_type_guess: str, document_url: str) -> bool:
+        """Flags claim/application forms and known noise paths (e.g. old
+        investment-fund archives - see registry.py) as out of scope for
+        this vertical slice. Flagged, not dropped - the item is still
+        yielded so the crawl output stays a complete, honest record."""
+        if doc_type_guess in OUT_OF_SCOPE_DOC_TYPES:
+            return False
+        url_lower = document_url.lower()
+        if any(s in url_lower for s in self.insurer_seed.crawl_policy.excluded_path_substrings):
+            return False
+        return True
