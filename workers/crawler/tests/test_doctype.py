@@ -22,3 +22,12 @@ def test_annual_report_detected():
     annual report PDF has zero policy content but is expensive to
     download/OCR/extract - flagged out of scope in registry.py."""
     assert classify("Fidelity Life Annual Report", "/media/xyz/fidelity-life-annual-report-2024.pdf") == "annual_report"
+
+
+def test_corporate_comms_detected():
+    """Real noise hit crawling Asteron Life (2026-07-31): investor news,
+    media releases, whistleblowing policy, SME Index research reports -
+    real Asteron Life content, but corporate communications, not
+    insurance policy content."""
+    assert classify("", "/documents/Asteron-Life-Investor-News-Issue-27.pdf") == "corporate_comms"
+    assert classify("", "/documents/Whistleblowing-Policy-2025.pdf") == "corporate_comms"

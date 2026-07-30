@@ -224,3 +224,27 @@ def test_known_document_urls_are_yielded_directly_as_discovered_items():
     assert {i.get("document_url") for i in items} == set(known_urls)
     assert all(i.get("in_scope") is True for i in items)
     assert len(page_requests) == len(spider.start_urls)
+
+
+def test_smeindex_documents_are_flagged_out_of_scope_not_dropped():
+    """Real noise hit crawling Asteron Life (2026-07-31): the /documents/
+    SMEIndex/ directory held 14+ small-business research reports spanning
+    2018-2023, none of them insurance product content - a sibling problem
+    to the existing /investments/ exclusion."""
+    body = (
+        '<html><body>'
+        '<a href="/sites/default/files/documents/SMEIndex/asteron-life-sme-index-2023.pdf">'
+        'SME Index 2023</a>'
+        '</body></html>'
+    )
+    request = scrapy.Request(url="https://www.asteronlife.co.nz/")
+    response = scrapy.http.HtmlResponse(
+        url="https://www.asteronlife.co.nz/", body=body.encode("utf-8"), encoding="utf-8", request=request
+    )
+
+    spider = PolicyDocumentSpider(insurer="Asteron Life")
+    results = list(spider.parse(response))
+    items = [r for r in results if isinstance(r, DiscoveredDocumentItem)]
+
+    assert len(items) == 1
+    assert items[0].get("in_scope") is False

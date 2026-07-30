@@ -93,7 +93,7 @@ DEFAULT_DOCUMENT_HUB_PATHS: tuple[str, ...] = (
 # confirmed via docker top + /proc's wchan/socket inspection that the
 # process was genuinely alive and network-active the whole time, not
 # hung; it was just real, wasted work on an irrelevant document.
-OUT_OF_SCOPE_DOC_TYPES: tuple[str, ...] = ("form", "annual_report")
+OUT_OF_SCOPE_DOC_TYPES: tuple[str, ...] = ("form", "annual_report", "corporate_comms")
 DEFAULT_EXCLUDED_PATH_SUBSTRINGS: tuple[str, ...] = ("/investments/",)
 
 
@@ -152,7 +152,18 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
             ),
         ),
     ),
-    InsurerSeed("Asteron Life", "https://www.asteronlife.co.nz"),
+    InsurerSeed(
+        "Asteron Life",
+        "https://www.asteronlife.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Real noise found 2026-07-31 (Phase A section review): the
+            # /documents/SMEIndex/ directory alone held 14+ small-business
+            # research reports/infographics spanning 2018-2023 (dozens of
+            # sections), none of them insurance product content - a
+            # sibling problem to the existing /investments/ exclusion.
+            excluded_path_substrings=DEFAULT_EXCLUDED_PATH_SUBSTRINGS + ("/smeindex/",),
+        ),
+    ),
     InsurerSeed(
         "Chubb Life NZ",
         "https://www.chubb.com/nz-en/",

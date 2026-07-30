@@ -20,6 +20,11 @@ PATTERNS: dict[str, tuple[str, ...]] = {
     "renewal_doc": ("renewal notice", "renewal terms"),
     "faq": ("frequently asked questions", "faq"),
     "annual_report": ("annual report", "annual statement", "investor report"),
+    "corporate_comms": (
+        "investor news", "media release", "media statement", "whistleblowing",
+        "climate disclosure", "fair conduct programme", "sme index", "board and leadership",
+        "completes acquisition", "product updates and enhancements", "passback",
+    ),
 }
 
 _SEPARATORS = str.maketrans("-_/", "   ")
