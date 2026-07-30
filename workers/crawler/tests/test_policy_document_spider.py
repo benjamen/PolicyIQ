@@ -75,6 +75,28 @@ def test_known_noise_paths_are_flagged_out_of_scope_not_dropped():
     assert items[0].get("in_scope") is False
 
 
+def test_off_domain_pdfs_are_flagged_out_of_scope_not_dropped():
+    """Real noise hit crawling Fidelity Life (2026-07-30): its own site
+    linked an FMA (regulator) licensing PDF, off fidelitylife.co.nz
+    entirely - a third party's document is never the insurer's own
+    policy wording, no matter what the link text says. Still yielded,
+    same flagged-not-dropped pattern as claim forms / noise paths."""
+    body = (
+        '<html><body>'
+        '<a href="https://www.fma.govt.nz/assets/some-licensing-guide.pdf">'
+        'Standard Conditions for full FAP licences</a>'
+        '</body></html>'
+    )
+    response = _make_response(body)
+
+    results = list(_spider().parse(response))
+    items = [r for r in results if isinstance(r, DiscoveredDocumentItem)]
+
+    assert len(items) == 1
+    assert items[0].get("document_url") == "https://www.fma.govt.nz/assets/some-licensing-guide.pdf"
+    assert items[0].get("in_scope") is False
+
+
 def test_zero_links_on_a_static_response_retries_with_playwright():
     body = "<html><body>No links here at all - just an empty SPA shell.</body></html>"
     response = _make_response(body, playwright_rendered=False)

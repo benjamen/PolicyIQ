@@ -141,11 +141,19 @@ class PolicyDocumentSpider(scrapy.Spider):
                 yield response.follow(absolute_url, callback=self.parse)
 
     def _is_in_scope(self, doc_type_guess: str, document_url: str) -> bool:
-        """Flags claim/application forms and known noise paths (e.g. old
-        investment-fund archives - see registry.py) as out of scope for
-        this vertical slice. Flagged, not dropped - the item is still
-        yielded so the crawl output stays a complete, honest record."""
+        """Flags claim/application forms, known noise paths (e.g. old
+        investment-fund archives - see registry.py), and off-domain PDFs
+        as out of scope for this vertical slice. Flagged, not dropped -
+        the item is still yielded so the crawl output stays a complete,
+        honest record.
+
+        Off-domain check added 2026-07-30: a real Fidelity Life crawl
+        picked up an FMA (regulator) licensing PDF linked from Fidelity's
+        own site - a third party's document is never the insurer's own
+        policy wording, regardless of what the link text says."""
         if doc_type_guess in OUT_OF_SCOPE_DOC_TYPES:
+            return False
+        if urlparse(document_url).netloc != self.allowed_domains[0]:
             return False
         url_lower = document_url.lower()
         if any(s in url_lower for s in self.insurer_seed.crawl_policy.excluded_path_substrings):
