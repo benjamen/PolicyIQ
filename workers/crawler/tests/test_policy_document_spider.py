@@ -90,22 +90,21 @@ def test_annual_reports_are_flagged_out_of_scope_not_dropped():
 
 
 def test_out_of_path_pdfs_are_flagged_out_of_scope_and_pages_are_not_followed():
-    """Real gap found crawling Chubb Life NZ (2026-07-30): chubb.com shares
-    one domain and one AEM content repository across every country Chubb
-    operates in - an unrestricted same-domain crawl found 600+ candidates
-    within minutes, 518 under /content/dam/.../us-en/ (US business-
-    insurance campaigns, nothing to do with NZ life cover). allowed_paths
-    (registry.py) must be enforced both for document scoping AND for
-    whether a same-domain page even gets followed at all - the second
-    part matters more: without it, the crawl wastes real requests/time
-    wandering the whole multinational site before any per-document
-    scoping ever runs."""
+    """Real gap found crawling Chubb Life NZ (2026-07-30/31): chubb.com
+    shares one domain, one AEM content repository, and one site across
+    every country AND every Chubb NZ product line (property, travel,
+    cyber, aviation), not just life. allowed_paths (registry.py, scoped
+    to the actual retail life product) must be enforced both for document
+    scoping AND for whether a same-domain page even gets followed at all
+    - the second part matters more: without it, the crawl wastes real
+    requests/time wandering the whole multinational/multi-product site
+    before any per-document scoping ever runs."""
     chubb_url = "https://www.chubb.com/nz-en/"
     body = (
         '<html><body>'
         '<a href="/content/dam/chubb-sites/chubb-com/us-en/some-us-campaign.pdf">US PDF</a>'
-        '<a href="/us-en/business-insurance/">US page</a>'
-        '<a href="/nz-en/personal/life-insurance/">NZ page</a>'
+        '<a href="/nz-en/business/aviation-insurance/">NZ general-insurance page</a>'
+        '<a href="/nz-en/life/life-and-living/critical-illness-cover.html">NZ life page</a>'
         '</body></html>'
     )
     request = scrapy.Request(url=chubb_url)
@@ -119,10 +118,11 @@ def test_out_of_path_pdfs_are_flagged_out_of_scope_and_pages_are_not_followed():
     assert len(items) == 1
     assert items[0].get("in_scope") is False
 
-    # Only the /nz-en/ page gets followed - the /us-en/ one, same domain
-    # but out of the allowed path, is never even requested.
+    # Only the /nz-en/life/... page gets followed - the /nz-en/business/...
+    # one, same domain and same country, but a different (general-
+    # insurance) product line, is never even requested.
     assert len(requests) == 1
-    assert requests[0].url == "https://www.chubb.com/nz-en/personal/life-insurance/"
+    assert requests[0].url == "https://www.chubb.com/nz-en/life/life-and-living/critical-illness-cover.html"
 
 
 def test_known_noise_paths_are_flagged_out_of_scope_not_dropped():

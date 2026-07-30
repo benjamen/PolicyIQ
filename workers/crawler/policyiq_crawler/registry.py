@@ -158,28 +158,35 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
         "https://www.chubb.com/nz-en/",
         crawl_policy=CrawlPolicy(
             # chubb.com is one shared domain (and one AEM content
-            # repository) across every country Chubb operates in - see
-            # _is_within_allowed_paths in the spider for the real evidence
-            # (600+ candidates, 518 under /content/dam/.../us-en/, within
-            # an unrestricted crawl's first few minutes).
+            # repository) across every country Chubb operates in AND
+            # across every Chubb NZ product line, not just life - real
+            # evidence 2026-07-31: an unrestricted crawl found 600+
+            # candidates, and even after scoping to nz-en only, the
+            # biggest documents by section count were Home Contents
+            # ("Masterpiece"), Business Travel, Group Personal Accident,
+            # Aviation Hull Liability, Cyber, Life Sciences Liability -
+            # real Chubb NZ products, just general/commercial insurance,
+            # nothing to do with this project's life/trauma/TPD/income-
+            # protection vertical. Scoped tight to the actual retail life
+            # product ("Life and Living Insurance") instead of the whole
+            # /nz-en/ site.
             #
-            # Two DAM site keys, not one - found 2026-07-31 re-reviewing
-            # this insurer's own dumped section text: Chubb NZ's general/
-            # commercial products (property, travel, cyber, aviation,
-            # liability) publish under .../chubb-sites/chubb-com/nz-en/,
-            # but its actual retail life insurance business ("Life and
-            # Living Insurance" - life cover, critical illness cover,
-            # income/expenses cover) publishes under the sibling
-            # .../chubb-sites/chubb/nz-en/ path instead (no "-com"). The
-            # first allowed_paths fix (chubb-com only) wrongly excluded
-            # every real life-insurance document as a result - confirmed
-            # directly against /nz-en/life/life-and-living/expenses-
-            # cover.html's real PDF links.
+            # Two DAM site keys, not one: the life business unit
+            # publishes under .../chubb-sites/chubb/nz-en/life/ (no
+            # "-com"), a sibling of the general-insurance .../chubb-com/
+            # nz-en/ tree - confirmed against /nz-en/life.html's real
+            # links (life cover, critical illness cover, income/expenses
+            # cover, the umbrella policy document all sit there).
             allowed_paths=(
-                "/nz-en/",
-                "/content/dam/chubb-sites/chubb-com/nz-en/",
-                "/content/dam/chubb-sites/chubb/nz-en/",
+                "/nz-en/life",
+                "/nz-en/personal/life-insurance.html",
+                "/content/dam/chubb-sites/chubb/nz-en/life/",
             ),
+            # /nz-en/life.html isn't reliably reachable via homepage link-
+            # following alone (same "real hub page, not always linked
+            # prominently" problem DEFAULT_DOCUMENT_HUB_PATHS exists for)
+            # - seeded directly rather than hoped for.
+            document_hub_paths=DEFAULT_DOCUMENT_HUB_PATHS + ("/nz-en/life.html", "/nz-en/life/life-and-living.html"),
         ),
     ),
     InsurerSeed("MAS (Medical Assurance Society)", "https://www.mas.co.nz"),
