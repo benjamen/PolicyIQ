@@ -89,6 +89,42 @@ def test_annual_reports_are_flagged_out_of_scope_not_dropped():
     assert items[0].get("in_scope") is False
 
 
+def test_out_of_path_pdfs_are_flagged_out_of_scope_and_pages_are_not_followed():
+    """Real gap found crawling Chubb Life NZ (2026-07-30): chubb.com shares
+    one domain and one AEM content repository across every country Chubb
+    operates in - an unrestricted same-domain crawl found 600+ candidates
+    within minutes, 518 under /content/dam/.../us-en/ (US business-
+    insurance campaigns, nothing to do with NZ life cover). allowed_paths
+    (registry.py) must be enforced both for document scoping AND for
+    whether a same-domain page even gets followed at all - the second
+    part matters more: without it, the crawl wastes real requests/time
+    wandering the whole multinational site before any per-document
+    scoping ever runs."""
+    chubb_url = "https://www.chubb.com/nz-en/"
+    body = (
+        '<html><body>'
+        '<a href="/content/dam/chubb-sites/chubb-com/us-en/some-us-campaign.pdf">US PDF</a>'
+        '<a href="/us-en/business-insurance/">US page</a>'
+        '<a href="/nz-en/personal/life-insurance/">NZ page</a>'
+        '</body></html>'
+    )
+    request = scrapy.Request(url=chubb_url)
+    response = scrapy.http.HtmlResponse(url=chubb_url, body=body.encode("utf-8"), encoding="utf-8", request=request)
+
+    spider = PolicyDocumentSpider(insurer="Chubb Life NZ")
+    results = list(spider.parse(response))
+    items = [r for r in results if isinstance(r, DiscoveredDocumentItem)]
+    requests = [r for r in results if isinstance(r, scrapy.Request)]
+
+    assert len(items) == 1
+    assert items[0].get("in_scope") is False
+
+    # Only the /nz-en/ page gets followed - the /us-en/ one, same domain
+    # but out of the allowed path, is never even requested.
+    assert len(requests) == 1
+    assert requests[0].url == "https://www.chubb.com/nz-en/personal/life-insurance/"
+
+
 def test_known_noise_paths_are_flagged_out_of_scope_not_dropped():
     """Real noise hit crawling Asteron Life (2026-07-29): a large archive
     of old investment/superannuation fund documents under /investments/ -

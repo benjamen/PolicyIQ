@@ -169,15 +169,32 @@ class PolicyDocumentSpider(scrapy.Spider):
                     discovered_at=datetime.now(timezone.utc).isoformat(),
                     in_scope=self._is_in_scope(doc_type_guess, absolute_url),
                 )
-            elif urlparse(absolute_url).netloc == self.allowed_domains[0]:
+            elif urlparse(absolute_url).netloc == self.allowed_domains[0] and self._is_within_allowed_paths(
+                absolute_url
+            ):
                 yield response.follow(absolute_url, callback=self.parse)
+
+    def _is_within_allowed_paths(self, url: str) -> bool:
+        """registry.py's allowed_paths (default `("/",)`, matching
+        everything - a no-op for a normal single-country insurer site).
+        Enforced here for real 2026-07-30: Chubb Life NZ's site shares one
+        domain (chubb.com) and one AEM content repository across every
+        country Chubb operates in - an unrestricted same-domain crawl
+        found 600+ candidates within minutes, 518 of them under
+        /content/dam/chubb-sites/chubb-com/us-en/... (US business-
+        insurance campaign PDFs, nothing to do with NZ life cover).
+        Checked before following a link at all (not just at document-
+        scoping time) so the crawl doesn't waste real requests/time
+        wandering the entire multinational site in the first place."""
+        path = urlparse(url).path
+        return any(path.startswith(prefix) for prefix in self.insurer_seed.crawl_policy.allowed_paths)
 
     def _is_in_scope(self, doc_type_guess: str, document_url: str) -> bool:
         """Flags claim/application forms, known noise paths (e.g. old
-        investment-fund archives - see registry.py), and off-domain PDFs
-        as out of scope for this vertical slice. Flagged, not dropped -
-        the item is still yielded so the crawl output stays a complete,
-        honest record.
+        investment-fund archives - see registry.py), off-domain PDFs, and
+        out-of-path PDFs (e.g. a shared multinational CMS) as out of scope
+        for this vertical slice. Flagged, not dropped - the item is still
+        yielded so the crawl output stays a complete, honest record.
 
         Off-domain check added 2026-07-30: a real Fidelity Life crawl
         picked up an FMA (regulator) licensing PDF linked from Fidelity's
@@ -186,6 +203,8 @@ class PolicyDocumentSpider(scrapy.Spider):
         if doc_type_guess in OUT_OF_SCOPE_DOC_TYPES:
             return False
         if urlparse(document_url).netloc != self.allowed_domains[0]:
+            return False
+        if not self._is_within_allowed_paths(document_url):
             return False
         url_lower = document_url.lower()
         if any(s in url_lower for s in self.insurer_seed.crawl_policy.excluded_path_substrings):

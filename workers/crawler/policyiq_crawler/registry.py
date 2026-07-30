@@ -153,7 +153,18 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
         ),
     ),
     InsurerSeed("Asteron Life", "https://www.asteronlife.co.nz"),
-    InsurerSeed("Chubb Life NZ", "https://www.chubb.com/nz-en/"),
+    InsurerSeed(
+        "Chubb Life NZ",
+        "https://www.chubb.com/nz-en/",
+        crawl_policy=CrawlPolicy(
+            # chubb.com is one shared domain (and one AEM content
+            # repository) across every country Chubb operates in - see
+            # _is_within_allowed_paths in the spider for the real evidence
+            # (600+ candidates, 518 under /content/dam/.../us-en/, within
+            # an unrestricted crawl's first few minutes).
+            allowed_paths=("/nz-en/", "/content/dam/chubb-sites/chubb-com/nz-en/"),
+        ),
+    ),
     InsurerSeed("MAS (Medical Assurance Society)", "https://www.mas.co.nz"),
     InsurerSeed("Pinnacle Life", "https://www.pinnaclelife.co.nz"),
 )
