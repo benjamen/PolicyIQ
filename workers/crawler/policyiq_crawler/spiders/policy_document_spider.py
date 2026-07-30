@@ -90,7 +90,15 @@ class PolicyDocumentSpider(scrapy.Spider):
             "DOWNLOAD_DELAY": self.insurer_seed.crawl_policy.request_delay_seconds,
         }
 
-    def start_requests(self):
+    async def start(self):
+        """Scrapy 2.13+ replaced the old sync `start_requests()` hook with
+        this async generator - `start_requests()` is dead code under
+        Scrapy 2.17 (confirmed directly: base Spider has no such attribute
+        at all, and nothing in the engine bridges it), which is exactly
+        why known_document_urls silently never appeared in a single real
+        crawl despite a passing unit test - that test called
+        `start_requests()` as a plain method directly, which works in
+        isolation but is never what the actual crawl engine calls."""
         for url in self.start_urls:
             yield scrapy.Request(url, callback=self.parse)
         # known_document_urls (registry.py) are real documents already

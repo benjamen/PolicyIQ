@@ -1,3 +1,5 @@
+import asyncio
+
 import scrapy
 
 from policyiq_crawler.items import DiscoveredDocumentItem
@@ -5,6 +7,21 @@ from policyiq_crawler.registry import DEFAULT_DOCUMENT_HUB_PATHS
 from policyiq_crawler.spiders.policy_document_spider import PolicyDocumentSpider
 
 _URL = "https://www.partnerslife.co.nz/"
+
+
+def _drain_async_gen(agen):
+    """Scrapy 2.13+'s `Spider.start()` is an async generator - the real
+    crawl engine drives it with `anext()` in an event loop. Calling it as
+    a plain sync method (as an earlier version of this test did, against
+    the old `start_requests()` name) only proves the method body runs; it
+    proves nothing about what the actual engine will do, since Scrapy
+    2.17 never calls a spider's `start_requests()` at all (confirmed:
+    base Spider has no such attribute)."""
+
+    async def _collect():
+        return [item async for item in agen]
+
+    return asyncio.run(_collect())
 
 
 def _make_response(body: str, *, playwright_rendered: bool = False) -> scrapy.http.HtmlResponse:
@@ -140,15 +157,15 @@ def test_known_document_urls_are_yielded_directly_as_discovered_items():
     """Real gap found crawling Fidelity Life (2026-07-30): its actual
     policy-wording PDFs exist on its own domain but aren't linked from any
     page within crawl depth - only search-engine-indexed. registry.py's
-    known_document_urls seeds these directly; start_requests() must turn
+    known_document_urls seeds these directly; start() must turn
     each into a DiscoveredDocumentItem, not a page-fetch (parse() drops
     PDF responses outright, so routing these through the normal page-fetch
     path would silently lose every one of them)."""
     spider = PolicyDocumentSpider(insurer="Fidelity Life")
 
-    requests = list(spider.start_requests())
-    items = [r for r in requests if isinstance(r, DiscoveredDocumentItem)]
-    page_requests = [r for r in requests if isinstance(r, scrapy.Request)]
+    results = _drain_async_gen(spider.start())
+    items = [r for r in results if isinstance(r, DiscoveredDocumentItem)]
+    page_requests = [r for r in results if isinstance(r, scrapy.Request)]
 
     known_urls = spider.insurer_seed.crawl_policy.known_document_urls
     assert len(known_urls) > 0
