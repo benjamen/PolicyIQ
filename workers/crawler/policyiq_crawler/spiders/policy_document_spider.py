@@ -90,6 +90,30 @@ class PolicyDocumentSpider(scrapy.Spider):
             "DOWNLOAD_DELAY": self.insurer_seed.crawl_policy.request_delay_seconds,
         }
 
+    def start_requests(self):
+        for url in self.start_urls:
+            yield scrapy.Request(url, callback=self.parse)
+        # known_document_urls (registry.py) are real documents already
+        # verified live but not reachable via link-following within crawl
+        # depth - yielded directly rather than discovered via parse(),
+        # since parse() drops PDF responses (they're not pages to follow
+        # links from) and would never otherwise turn a start_url PDF into
+        # a DiscoveredDocumentItem.
+        for document_url in self.insurer_seed.crawl_policy.known_document_urls:
+            yield self._known_document_item(document_url)
+
+    def _known_document_item(self, document_url: str) -> DiscoveredDocumentItem:
+        doc_type_guess = classify("", document_url)
+        return DiscoveredDocumentItem(
+            insurer=self.insurer_seed.name,
+            source_page_url=self.insurer_seed.website_root,
+            document_url=document_url,
+            link_text="",
+            doc_type_guess=doc_type_guess,
+            discovered_at=datetime.now(timezone.utc).isoformat(),
+            in_scope=self._is_in_scope(doc_type_guess, document_url),
+        )
+
     def parse(self, response: scrapy.http.Response):
         if response.headers.get("Content-Type", b"").decode().startswith("application/pdf"):
             return

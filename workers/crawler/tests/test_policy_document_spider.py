@@ -134,3 +134,24 @@ def test_start_urls_include_the_homepage_and_every_document_hub_path():
     for path in DEFAULT_DOCUMENT_HUB_PATHS:
         assert f"https://www.partnerslife.co.nz{path}" in spider.start_urls
     assert len(spider.start_urls) == 1 + len(DEFAULT_DOCUMENT_HUB_PATHS)
+
+
+def test_known_document_urls_are_yielded_directly_as_discovered_items():
+    """Real gap found crawling Fidelity Life (2026-07-30): its actual
+    policy-wording PDFs exist on its own domain but aren't linked from any
+    page within crawl depth - only search-engine-indexed. registry.py's
+    known_document_urls seeds these directly; start_requests() must turn
+    each into a DiscoveredDocumentItem, not a page-fetch (parse() drops
+    PDF responses outright, so routing these through the normal page-fetch
+    path would silently lose every one of them)."""
+    spider = PolicyDocumentSpider(insurer="Fidelity Life")
+
+    requests = list(spider.start_requests())
+    items = [r for r in requests if isinstance(r, DiscoveredDocumentItem)]
+    page_requests = [r for r in requests if isinstance(r, scrapy.Request)]
+
+    known_urls = spider.insurer_seed.crawl_policy.known_document_urls
+    assert len(known_urls) > 0
+    assert {i.get("document_url") for i in items} == set(known_urls)
+    assert all(i.get("in_scope") is True for i in items)
+    assert len(page_requests) == len(spider.start_urls)

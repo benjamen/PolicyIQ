@@ -100,6 +100,18 @@ class CrawlPolicy:
     allowed_paths: tuple[str, ...] = ("/",)
     document_hub_paths: tuple[str, ...] = DEFAULT_DOCUMENT_HUB_PATHS
     excluded_path_substrings: tuple[str, ...] = DEFAULT_EXCLUDED_PATH_SUBSTRINGS
+    # Real, individually-verified (curl'd, 200 OK) document URLs on the
+    # insurer's own domain that homepage + hub-path + depth-limited link-
+    # following genuinely cannot reach - not linked from any page within
+    # crawl depth, only search-engine-indexed. Confirmed 2026-07-30:
+    # Fidelity Life's actual "*-policy-wording.pdf" documents (the real
+    # TPD/exclusions/waiting-period text) exist on fidelitylife.co.nz but
+    # every page the crawl reaches links only to short marketing
+    # factsheets for the same products - same "real documents the crawl
+    # can't see" problem hub-path seeding solved for Asteron, one level
+    # more specific. Each entry here must be a document actually found and
+    # verified live, never a guessed URL pattern.
+    known_document_urls: tuple[str, ...] = ()
     blocked: bool = False
     contact_note: str = ""
 
@@ -120,7 +132,19 @@ class InsurerSeed:
 LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
     InsurerSeed("AIA New Zealand", "https://www.aia.co.nz"),
     InsurerSeed("Partners Life", "https://www.partnerslife.co.nz"),
-    InsurerSeed("Fidelity Life", "https://www.fidelitylife.co.nz"),
+    InsurerSeed(
+        "Fidelity Life",
+        "https://www.fidelitylife.co.nz",
+        crawl_policy=CrawlPolicy(
+            known_document_urls=(
+                "https://www.fidelitylife.co.nz/media/rhwnwmfn/life-protect-life-cover-policy-wording.pdf",
+                "https://www.fidelitylife.co.nz/media/h44hlvyf/life-protect-terms-and-conditions-policy-wording.pdf",
+                "https://www.fidelitylife.co.nz/media/fowk50ds/term-cover-policy-wording.pdf",
+                "https://www.fidelitylife.co.nz/media/mfal5f3c/life-protect-permanent-disability-cover-policy-wording.pdf",
+                "https://www.fidelitylife.co.nz/media/2lcblfeh/life-protect-income-cover-policy-wording.pdf",
+            ),
+        ),
+    ),
     InsurerSeed("Asteron Life", "https://www.asteronlife.co.nz"),
     InsurerSeed("Chubb Life NZ", "https://www.chubb.com/nz-en/"),
     InsurerSeed("MAS (Medical Assurance Society)", "https://www.mas.co.nz"),
