@@ -482,7 +482,7 @@
       <button class="nav-item" data-view="search"><span class="ic">◎</span> Search</button>
       <button class="nav-item" data-view="compare"><span class="ic">⇄</span> Compare</button>
       <div class="nav-label">Browse</div>
-      <button class="nav-item" data-view="dashboard"><span class="ic">▤</span> Insurers</button>
+      <button class="nav-item" data-view="insurers"><span class="ic">▤</span> Insurers</button>
       <button class="nav-item" data-view="compare"><span class="ic">▥</span> Policies</button>
       <button class="nav-item" data-view="dashboard"><span class="ic">◷</span> Recent Changes</button>
       <button class="nav-item" data-view="search"><span class="ic">▦</span> Document Explorer</button>
@@ -517,6 +517,35 @@
       <div class="card" style="padding:28px 24px;text-align:center;color:var(--text-faint)">
         <p style="margin:0 0 6px;font-weight:650;color:var(--text)">Dashboard isn't built yet</p>
         <p style="margin:0;max-width:52ch;margin-inline:auto">Crawler health, document counts, and citation-verification stats need an admin/metrics API that doesn't exist yet. See <button class="nav-item" style="display:inline;width:auto;padding:0;color:var(--teal);font-weight:600" data-view="compare">Compare</button> for the real, live, citation-verified comparison data.</p>
+      </div>
+    </section>
+
+    <!-- ================= INSURERS ================= -->
+    <section class="view" id="view-insurers">
+      <div class="section-head" style="margin-top:0">
+        <h2>NZ insurer coverage</h2>
+        <span class="pill neutral" id="insurers-data-source-pill">Loading…</span>
+      </div>
+      <div class="grade-board" id="insurers-loading" style="display:none">
+        <div class="card skeleton-card">
+          <div class="skeleton skeleton-line" style="width:60%;height:16px"></div>
+          <div class="skeleton skeleton-line" style="width:90%"></div>
+          <div class="skeleton skeleton-line" style="width:75%"></div>
+        </div>
+      </div>
+      <div class="card error-card" id="insurers-error" style="display:none">
+        <span class="ic">⚠</span>
+        <div class="msg">
+          <b>Couldn't load insurer coverage</b>
+          The coverage service didn't respond. Retry when ready.
+        </div>
+        <button class="btn-ghost" id="btn-retry-insurers">Retry</button>
+      </div>
+      <div id="insurers-loaded">
+        <div class="table-wrap">
+          <table id="insurers-table"></table>
+        </div>
+        <p class="grade-footnote">A real, human-researched map of NZ's life/general/health insurers (RBNZ, ICNZ, FSC, and each insurer's own site) — "Data" means this project has actually ingested real, citation-verified documents; "Offered" alone means the insurer sells that cover but we haven't crawled/authored it yet. Loaded live from <code class="mono">/api/v1/insurers/coverage</code>.</p>
       </div>
     </section>
 
@@ -704,14 +733,21 @@
   const navItems = document.querySelectorAll('.nav-item');
   const views = document.querySelectorAll('.view');
   const title = document.getElementById('topbar-title');
-  const titles = { dashboard: 'Dashboard', search: 'Search', compare: 'Compare', admin: 'Admin', account: 'Account' };
+  const titles = { dashboard: 'Dashboard', search: 'Search', compare: 'Compare', insurers: 'Insurers', admin: 'Admin', account: 'Account' };
 
   function navigate(target) {
     navItems.forEach(b => b.classList.toggle('active', b.dataset.view === target));
     views.forEach(v => v.classList.toggle('active', v.id === 'view-' + target));
     title.textContent = titles[target] || target;
   }
-  navItems.forEach(btn => btn.addEventListener('click', () => navigate(btn.dataset.view)));
+  let insurersFetchedOnce = false;
+  navItems.forEach(btn => btn.addEventListener('click', () => {
+    navigate(btn.dataset.view);
+    if (btn.dataset.view === 'insurers' && !insurersFetchedOnce) {
+      insurersFetchedOnce = true;
+      fetchInsurerCoverage();
+    }
+  }));
   document.getElementById('rail-foot-btn').addEventListener('click', () => navigate('account'));
 
   const root = document.documentElement;
@@ -1141,6 +1177,75 @@
       }
     });
   });
+
+  /* ---- Insurers: real NZ market coverage tracker ---- */
+  const insurersBlocks = {
+    loading: document.getElementById('insurers-loading'),
+    error: document.getElementById('insurers-error'),
+    loaded: document.getElementById('insurers-loaded'),
+  };
+  function setInsurersState(state) {
+    Object.entries(insurersBlocks).forEach(([key, el]) => {
+      el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
+    });
+  }
+  document.getElementById('btn-retry-insurers').addEventListener('click', () => fetchInsurerCoverage());
+
+  const insurersDataSourcePill = document.getElementById('insurers-data-source-pill');
+
+  const PRODUCT_TYPE_LABELS = { life_cover: 'Life', home_contents: 'General', health: 'Health' };
+  const PRODUCT_TYPE_ORDER = ['life_cover', 'home_contents', 'health'];
+
+  function escapeHtmlInsurers(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+  }
+
+  function renderInsurerCoverage(results) {
+    const table = document.getElementById('insurers-table');
+    if (!results || results.length === 0) {
+      table.innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-faint)">No insurer catalog data available.</td></tr></tbody>';
+      return;
+    }
+    const theadHtml = `<tr><th style="width:26%">Insurer</th>${PRODUCT_TYPE_ORDER.map(pt => `<th>${PRODUCT_TYPE_LABELS[pt]}</th>`).join('')}<th>Notes</th></tr>`;
+    const tbodyHtml = results.map(r => {
+      const typeByKey = Object.fromEntries(r.types.map(t => [t.product_type, t]));
+      const cellsHtml = PRODUCT_TYPE_ORDER.map(pt => {
+        const t = typeByKey[pt];
+        if (!t || !t.offered) return '<td class="compare-cell-missing">—</td>';
+        return t.covered
+          ? '<td><span class="pill ok" style="display:inline-block">Data</span></td>'
+          : '<td><span class="pill warn" style="display:inline-block">Offered, not ingested</span></td>';
+      }).join('');
+      const website = r.website ? `<a href="${escapeHtmlInsurers(r.website)}" target="_blank" rel="noopener">${escapeHtmlInsurers(r.name)}</a>` : escapeHtmlInsurers(r.name);
+      const notes = r.notes ? escapeHtmlInsurers(r.notes) : '';
+      return `<tr><td>${website}</td>${cellsHtml}<td style="max-width:36ch;font-size:12.5px;color:var(--text-faint)">${notes}</td></tr>`;
+    }).join('');
+    table.innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
+  }
+
+  async function fetchInsurerCoverage() {
+    setInsurersState('loading');
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/insurers/coverage`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      if (res.status === 401) { showLogin(); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const total = data.results.length;
+      const covered = data.results.filter(r => r.types.some(t => t.covered)).length;
+      insurersDataSourcePill.textContent = `${covered} of ${total} insurers have real data`;
+      insurersDataSourcePill.classList.toggle('ok', covered > 0);
+      insurersDataSourcePill.classList.toggle('neutral', covered === 0);
+      renderInsurerCoverage(data.results);
+      setInsurersState('loaded');
+    } catch (err) {
+      setInsurersState('error');
+    }
+  }
 
   /* ---- Boot ---- */
   // No real auth backend exists yet (see docs/10-AUTH-AND-ACCOUNTS.md), so the login

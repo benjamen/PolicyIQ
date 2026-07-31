@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.compare import router as compare_router
+from app.api.v1.insurers import router as insurers_router
 
 app = FastAPI(
     title="PolicyIQ NZ API",
@@ -36,6 +37,7 @@ app.add_middleware(
 )
 
 app.include_router(compare_router, prefix="/api/v1")
+app.include_router(insurers_router, prefix="/api/v1")
 
 
 @app.get("/health")

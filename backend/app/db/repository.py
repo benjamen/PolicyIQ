@@ -38,6 +38,8 @@ from app.domain.models import (
     EligibilityWindow,
     GeneralInsuranceFact,
     GeneralProductProfile,
+    InsurerCoverage,
+    InsurerCoverageType,
     OccupationRestriction,
     PremiumBasis,
     PremiumStructure,
@@ -321,3 +323,54 @@ def load_general_insurance_profiles(session: Session, *, product_type: str) -> l
         )
 
     return profiles
+
+
+_ALL_PRODUCT_TYPES: tuple[str, ...] = ("life_cover", "home_contents", "health")
+
+
+def _insurer_has_document_for_product_type(session: Session, insurer_id: uuid.UUID, product_type: str) -> bool:
+    """"Covered" means at least one real Document exists for this insurer
+    under this product_type - not just an Insurer/Product row (those get
+    created as soon as a one-off setup script runs, before any document is
+    actually attached)."""
+    row = session.execute(
+        select(Document.id)
+        .join(PolicyVersion, Document.policy_version_id == PolicyVersion.id)
+        .join(Policy, PolicyVersion.policy_id == Policy.id)
+        .join(Product, Policy.product_id == Product.id)
+        .where(Product.insurer_id == insurer_id, Product.product_type == product_type)
+        .limit(1)
+    ).first()
+    return row is not None
+
+
+def load_insurer_coverage(session: Session) -> list[InsurerCoverage]:
+    """Cross-references the static, human-researched market catalog
+    (app/domain/nz_insurer_catalog.py) against what's actually in the DB -
+    "which real NZ insurers exist" comes from the catalog, "have we
+    actually got their data" comes from a live query, never from the
+    catalog itself (which only ever says what an insurer *offers*, not
+    whether it's ingested)."""
+    from app.domain.nz_insurer_catalog import NZ_INSURER_CATALOG
+
+    coverage: list[InsurerCoverage] = []
+    for entry in NZ_INSURER_CATALOG:
+        insurer = session.execute(
+            select(Insurer).where(Insurer.name == entry.name)
+        ).scalar_one_or_none()
+
+        types: list[InsurerCoverageType] = []
+        for product_type in _ALL_PRODUCT_TYPES:
+            offered = product_type in entry.types_offered
+            covered = (
+                offered
+                and insurer is not None
+                and _insurer_has_document_for_product_type(session, insurer.id, product_type)
+            )
+            types.append(InsurerCoverageType(product_type=product_type, offered=offered, covered=covered))
+
+        coverage.append(
+            InsurerCoverage(name=entry.name, website=entry.website, types=tuple(types), notes=entry.notes)
+        )
+
+    return coverage

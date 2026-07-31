@@ -156,3 +156,31 @@ class CompareFilters:
     smoker_status: SmokerStatus
     occupation_category: str
     product_type: str
+
+
+@dataclass(frozen=True)
+class InsurerCoverageType:
+    """Whether a known NZ insurer offers a given product type in the real
+    market, and separately, whether this project has actually ingested
+    real, citation-verified documents for it yet - the two are independent
+    (an insurer can genuinely sell home insurance we simply haven't
+    crawled/authored yet)."""
+
+    product_type: str
+    offered: bool
+    covered: bool
+
+
+@dataclass(frozen=True)
+class InsurerCoverage:
+    """One row of the market-coverage tracker (docs/07-ROADMAP.md's "which
+    real NZ insurers exist, and which have we actually got data for"
+    question) - built from the static, human-researched catalog in
+    app/domain/nz_insurer_catalog.py cross-referenced against what's
+    actually in the DB, not stored in the DB itself (same static-catalog
+    convention as the crawler's registry.py)."""
+
+    name: str
+    website: str
+    types: tuple[InsurerCoverageType, ...]
+    notes: str | None = None
