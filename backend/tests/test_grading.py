@@ -132,6 +132,19 @@ class TestGrading:
         assert report.overall_score is not None
         assert report.overall_score > 0
 
+    def test_confirmed_no_tpd_product_reads_not_published_not_not_extracted(self):
+        """Real gap found 2026-07-31: AA Life and Chubb Life NZ's product
+        lineups genuinely have no TPD cover at all (confirmed by reading
+        every one of their real policy documents) - "not extracted" would
+        misleadingly imply a pipeline gap rather than a confirmed absence."""
+        report = grade_product(make_profile(tpd_definition=None, tpd_offered=False), make_filters())
+        assert report.criteria["tpd_definition"].score is None
+        assert report.criteria["tpd_definition"].raw_value == "not published - no TPD cover offered"
+
+    def test_not_yet_checked_tpd_still_reads_not_extracted(self):
+        report = grade_product(make_profile(tpd_definition=None, tpd_offered=True), make_filters())
+        assert report.criteria["tpd_definition"].raw_value == "not extracted"
+
     def test_every_scored_criterion_carries_a_source(self):
         report = grade_product(make_profile(), make_filters())
         for name, result in report.criteria.items():

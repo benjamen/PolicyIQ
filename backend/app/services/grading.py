@@ -112,7 +112,8 @@ def check_eligibility(profile: ProductProfile, filters: CompareFilters) -> tuple
 def score_tpd_definition(profile: ProductProfile) -> CriterionResult:
     tpd = profile.tpd_definition
     if tpd is None:
-        return CriterionResult(None, DEFAULT_WEIGHTS["tpd_definition"], "not extracted", None)
+        raw_value = "not published - no TPD cover offered" if not profile.tpd_offered else "not extracted"
+        return CriterionResult(None, DEFAULT_WEIGHTS["tpd_definition"], raw_value, None)
     return CriterionResult(
         score=_TPD_SCORES[tpd.basis],
         weight=DEFAULT_WEIGHTS["tpd_definition"],

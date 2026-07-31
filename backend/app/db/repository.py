@@ -146,16 +146,24 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
         # all - one bad fact must never take down the whole response.
 
         tpd_definition = None
+        tpd_offered = True
         if (fact := facts_by_category.get("tpd_definition")) is not None:
-            try:
-                tpd_definition = TpdDefinition(
-                    basis=TpdBasis(fact.raw_value), source=_source_ref(insurer.name, fact, documents_by_id)
-                )
-            except ValueError:
-                logger.warning(
-                    "skipping malformed tpd_definition GradedFact %s (%s / %s): raw_value=%r is not a valid TpdBasis",
-                    fact.id, insurer.name, policy.name, fact.raw_value,
-                )
+            if fact.raw_value == "not_offered":
+                # No citation to verify here by design - this is an absence
+                # finding (this insurer's product lineup has no TPD cover at
+                # all), not a quoted fact, same reasoning as the unpublished-
+                # eligibility placeholder below.
+                tpd_offered = False
+            else:
+                try:
+                    tpd_definition = TpdDefinition(
+                        basis=TpdBasis(fact.raw_value), source=_source_ref(insurer.name, fact, documents_by_id)
+                    )
+                except ValueError:
+                    logger.warning(
+                        "skipping malformed tpd_definition GradedFact %s (%s / %s): raw_value=%r is not a valid TpdBasis",
+                        fact.id, insurer.name, policy.name, fact.raw_value,
+                    )
 
         trauma_condition_count = None
         trauma_condition_source = None
@@ -211,6 +219,7 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
                 eligibility=eligibility,
                 occupation_restrictions=occupation_restrictions,
                 tpd_definition=tpd_definition,
+                tpd_offered=tpd_offered,
                 trauma_condition_count=trauma_condition_count,
                 trauma_condition_source=trauma_condition_source,
                 premium_structure=premium_structure,

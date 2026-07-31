@@ -111,6 +111,11 @@ class ProductProfile:
     eligibility: EligibilityWindow
     occupation_restrictions: tuple[OccupationRestriction, ...] = field(default_factory=tuple)
     tpd_definition: TpdDefinition | None = None
+    # Distinguishes "we haven't checked" from "we checked and this insurer's
+    # product lineup genuinely has no TPD cover at all" (e.g. AA Life, Chubb
+    # Life NZ) - same "not published" vs "not extracted" reasoning as
+    # EligibilityWindow.eligibility_published, confirmed 2026-07-31.
+    tpd_offered: bool = True
     trauma_condition_count: int | None = None
     trauma_condition_source: SourceRef | None = None
     premium_structure: PremiumStructure | None = None
