@@ -325,7 +325,15 @@ def load_general_insurance_profiles(session: Session, *, product_type: str) -> l
     return profiles
 
 
-_ALL_PRODUCT_TYPES: tuple[str, ...] = ("life_cover", "home_contents", "health")
+# A catalog "house"/"contents" type is satisfied either by its own exact
+# DB product_type, or by a genuinely-combined "home_contents" product
+# (AMI/State publish one real document covering both - see
+# app/domain/nz_insurer_catalog.py's module docstring for why the split
+# lives at the DB/storage level, not the catalog level).
+_DB_PRODUCT_TYPES_FOR_CATALOG_TYPE: dict[str, tuple[str, ...]] = {
+    "house": ("house", "home_contents"),
+    "contents": ("contents", "home_contents"),
+}
 
 
 def _insurer_has_document_for_product_type(session: Session, insurer_id: uuid.UUID, product_type: str) -> bool:
@@ -333,12 +341,13 @@ def _insurer_has_document_for_product_type(session: Session, insurer_id: uuid.UU
     under this product_type - not just an Insurer/Product row (those get
     created as soon as a one-off setup script runs, before any document is
     actually attached)."""
+    db_product_types = _DB_PRODUCT_TYPES_FOR_CATALOG_TYPE.get(product_type, (product_type,))
     row = session.execute(
         select(Document.id)
         .join(PolicyVersion, Document.policy_version_id == PolicyVersion.id)
         .join(Policy, PolicyVersion.policy_id == Policy.id)
         .join(Product, Policy.product_id == Product.id)
-        .where(Product.insurer_id == insurer_id, Product.product_type == product_type)
+        .where(Product.insurer_id == insurer_id, Product.product_type.in_(db_product_types))
         .limit(1)
     ).first()
     return row is not None
@@ -351,7 +360,7 @@ def load_insurer_coverage(session: Session) -> list[InsurerCoverage]:
     actually got their data" comes from a live query, never from the
     catalog itself (which only ever says what an insurer *offers*, not
     whether it's ingested)."""
-    from app.domain.nz_insurer_catalog import NZ_INSURER_CATALOG
+    from app.domain.nz_insurer_catalog import ALL_PRODUCT_TYPES, NZ_INSURER_CATALOG
 
     coverage: list[InsurerCoverage] = []
     for entry in NZ_INSURER_CATALOG:
@@ -360,7 +369,7 @@ def load_insurer_coverage(session: Session) -> list[InsurerCoverage]:
         ).scalar_one_or_none()
 
         types: list[InsurerCoverageType] = []
-        for product_type in _ALL_PRODUCT_TYPES:
+        for product_type in ALL_PRODUCT_TYPES:
             offered = product_type in entry.types_offered
             covered = (
                 offered

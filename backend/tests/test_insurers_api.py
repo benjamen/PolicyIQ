@@ -15,7 +15,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.models import Base, Document, Insurer, Policy, PolicyVersion, Product, Section
 from app.db.session import get_db
-from app.domain.nz_insurer_catalog import NZ_INSURER_CATALOG
+from app.domain.nz_insurer_catalog import ALL_PRODUCT_TYPES, NZ_INSURER_CATALOG
 from app.main import app
 
 client = TestClient(app)
@@ -49,7 +49,8 @@ def test_coverage_reflects_a_real_document_but_not_an_insurer_row_alone():
     TestSession = sessionmaker(bind=engine)
 
     with TestSession() as session:
-        # AMI: full chain down to a real Document -> should show covered=True.
+        # AMI: one real, genuinely-combined document under "home_contents" ->
+        # must satisfy BOTH the "house" and "contents" catalog types.
         ami = Insurer(name="AMI", website_root="https://www.ami.co.nz")
         session.add(ami)
         session.flush()
@@ -71,7 +72,7 @@ def test_coverage_reflects_a_real_document_but_not_an_insurer_row_alone():
         tower = Insurer(name="Tower", website_root="https://www.tower.co.nz")
         session.add(tower)
         session.flush()
-        session.add(Product(insurer_id=tower.id, product_type="home_contents", name="Home & Contents"))
+        session.add(Product(insurer_id=tower.id, product_type="house", name="house"))
 
         session.commit()
 
@@ -86,12 +87,14 @@ def test_coverage_reflects_a_real_document_but_not_an_insurer_row_alone():
         by_name = {row["name"]: row for row in resp.json()["results"]}
 
         ami_types = {t["product_type"]: t for t in by_name["AMI"]["types"]}
-        assert ami_types["home_contents"]["offered"] is True
-        assert ami_types["home_contents"]["covered"] is True
+        assert ami_types["house"]["offered"] is True
+        assert ami_types["house"]["covered"] is True
+        assert ami_types["contents"]["offered"] is True
+        assert ami_types["contents"]["covered"] is True
 
         tower_types = {t["product_type"]: t for t in by_name["Tower"]["types"]}
-        assert tower_types["home_contents"]["offered"] is True
-        assert tower_types["home_contents"]["covered"] is False
+        assert tower_types["house"]["offered"] is True
+        assert tower_types["house"]["covered"] is False
 
         # A type an insurer doesn't sell should never appear as covered even
         # if it happens to have unrelated data - AMI doesn't sell life_cover.
@@ -106,7 +109,11 @@ def test_every_catalog_entry_offers_at_least_one_type():
     for entry in NZ_INSURER_CATALOG:
         assert len(entry.types_offered) > 0, f"{entry.name} offers nothing"
         for t in entry.types_offered:
-            assert t in ("life_cover", "home_contents", "health"), f"{entry.name} has unknown type {t}"
+            assert t in ALL_PRODUCT_TYPES, f"{entry.name} has unknown type {t}"
+            assert t != "home_contents", (
+                f"{entry.name}: catalog entries must use 'house'/'contents', "
+                "never the DB-internal combined 'home_contents' type"
+            )
 
 
 def test_no_duplicate_catalog_names():

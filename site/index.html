@@ -1021,20 +1021,40 @@
     table.innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
   }
 
+  // House and Contents are genuinely separate products for most insurers
+  // (Tower/Vero publish two distinct wordings) - "home_contents" only
+  // remains as the DB-internal type for insurers whose one real document
+  // genuinely bundles both (AMI/State). Fetches all three and merges by
+  // insurer so a Tower (house+contents) row and an AMI (home_contents) row
+  // land in the same table without forcing an inaccurate schema on either.
   async function fetchGeneralComparison() {
     setGeneralCompareState('loading');
     try {
-      const res = await fetch(`${API_BASE}/api/v1/compare/general`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_type: 'home_contents' }),
-      });
-      if (res.status === 401) { showLogin(); return; }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setGeneralDataSource(data.data_source);
-      renderGeneralTable(data.results);
+      const types = ['house', 'contents', 'home_contents'];
+      const responses = await Promise.all(types.map(product_type =>
+        fetch(`${API_BASE}/api/v1/compare/general`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_type }),
+        })
+      ));
+      for (const res of responses) {
+        if (res.status === 401) { showLogin(); return; }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      }
+      const datas = await Promise.all(responses.map(r => r.json()));
+      const byInsurer = new Map();
+      let dataSource = 'extracted_verified';
+      for (const data of datas) {
+        dataSource = data.data_source;
+        for (const r of data.results) {
+          if (!byInsurer.has(r.insurer)) byInsurer.set(r.insurer, { insurer: r.insurer, facts: [] });
+          byInsurer.get(r.insurer).facts.push(...r.facts);
+        }
+      }
+      setGeneralDataSource(dataSource);
+      renderGeneralTable([...byInsurer.values()]);
       setGeneralCompareState('loaded');
     } catch (err) {
       setGeneralCompareState('error');
@@ -1193,8 +1213,11 @@
 
   const insurersDataSourcePill = document.getElementById('insurers-data-source-pill');
 
-  const PRODUCT_TYPE_LABELS = { life_cover: 'Life', home_contents: 'General', health: 'Health' };
-  const PRODUCT_TYPE_ORDER = ['life_cover', 'home_contents', 'health'];
+  const PRODUCT_TYPE_LABELS = {
+    life_cover: 'Life', house: 'House', contents: 'Contents', car: 'Car', pet: 'Pet',
+    health: 'Health', travel: 'Travel', landlord: 'Landlord', business: 'Business', boat: 'Boat',
+  };
+  const PRODUCT_TYPE_ORDER = ['life_cover', 'house', 'contents', 'car', 'pet', 'health', 'travel', 'landlord', 'business', 'boat'];
 
   function escapeHtmlInsurers(str) {
     const div = document.createElement('div');
