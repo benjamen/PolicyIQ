@@ -199,10 +199,17 @@ class PolicyDocumentSpider(scrapy.Spider):
         Off-domain check added 2026-07-30: a real Fidelity Life crawl
         picked up an FMA (regulator) licensing PDF linked from Fidelity's
         own site - a third party's document is never the insurer's own
-        policy wording, regardless of what the link text says."""
+        policy wording, regardless of what the link text says.
+
+        trusted_document_domains added 2026-07-31: AA Life's real
+        documents live on www.aa.co.nz, a genuinely-owned sibling domain
+        of aainsurance.co.nz, not a third party - without this, the same
+        off-domain check that correctly excludes a regulator's PDF would
+        also incorrectly exclude the insurer's own documents."""
         if doc_type_guess in OUT_OF_SCOPE_DOC_TYPES:
             return False
-        if urlparse(document_url).netloc != self.allowed_domains[0]:
+        allowed_netlocs = {self.allowed_domains[0], *self.insurer_seed.crawl_policy.trusted_document_domains}
+        if urlparse(document_url).netloc not in allowed_netlocs:
             return False
         if not self._is_within_allowed_paths(document_url):
             return False

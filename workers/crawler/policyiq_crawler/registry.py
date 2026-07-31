@@ -121,6 +121,17 @@ class CrawlPolicy:
     # more specific. Each entry here must be a document actually found and
     # verified live, never a guessed URL pattern.
     known_document_urls: tuple[str, ...] = ()
+    # Additional domains treated as first-party for this insurer, alongside
+    # website_root's own domain - for a real, genuinely-owned sibling
+    # domain (not a third party). Confirmed 2026-07-31: AA Life's actual
+    # policy documents live on www.aa.co.nz (the main Automobile
+    # Association site), not aainsurance.co.nz (the insurance storefront)
+    # - the off-domain check that correctly excludes a third party's
+    # document (e.g. Fidelity Life's FMA regulator PDF) would otherwise
+    # also incorrectly exclude these, since they're a different domain
+    # too. Default empty tuple - a no-op for every insurer that doesn't
+    # need this.
+    trusted_document_domains: tuple[str, ...] = ()
     blocked: bool = False
     contact_note: str = ""
 
@@ -204,7 +215,55 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
     ),
     InsurerSeed("MAS (Medical Assurance Society)", "https://www.mas.co.nz"),
     InsurerSeed("Pinnacle Life", "https://www.pinnaclelife.co.nz"),
+    InsurerSeed(
+        "AA Life",
+        "https://www.aainsurance.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Real documents live on www.aa.co.nz (the main Automobile
+            # Association site), a genuinely-owned sibling of
+            # aainsurance.co.nz (the insurance storefront) - confirmed
+            # 2026-07-31 via aainsurance.co.nz's own /life-insurance page,
+            # which links out to aa.co.nz's real policy-wording page.
+            # AA Life is underwritten by Asteron Life Limited (a white-
+            # label product, not an independent insurer) - a real,
+            # separately-branded product line worth comparing anyway,
+            # since white-label terms commonly differ from the
+            # underwriter's own-branded product.
+            trusted_document_domains=("www.aa.co.nz",),
+            # The wording page lists the current set (filenames dated
+            # "Dec25", under .../april26/) alongside three older,
+            # clearly superseded version sets on the same page. Seeded
+            # directly (matching Fidelity Life's known_document_urls
+            # pattern) rather than relying on generic crawling to land
+            # on exactly the current 7, not an older set. Funeral Cover
+            # appears only in the superseded sets - genuinely dropped
+            # from the current lineup, not an oversight.
+            known_document_urls=(
+                "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/01_AALI_Policy%20Documents_BaseWording_Dec25.pdf",
+                "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/02_AALI_Policy%20Documents_Life%20Cover_Dec25.pdf",
+                "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/03_AALI_Policy%20Documents_Accidental%20Death%20Cover_Dec25.pdf",
+                "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/04_AALI_Policy%20Documents_CancerCareCover_Dec25.pdf",
+                "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/05_AALI_Policy%20Documents_Serious_Illness_Cover_Dec25.pdf",
+                "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/06_AALI_Policy%20Documents_Income_Protection_Cover_Dec25.pdf",
+                "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/07_AALI_Policy%20Documents_Serious%20Injury%20Cover_Dec25.pdf",
+            ),
+            excluded_path_substrings=DEFAULT_EXCLUDED_PATH_SUBSTRINGS + (
+                "/15-nov-2024-v2/", "/10-july-2024-v2/", "/5-august-2029-v2/",
+            ),
+        ),
+    ),
 )
+
+# Researched 2026-07-31, not added to the seed above:
+# - Tower: checked its full navigation (car, house, contents, boat,
+#   business, EV, motorbike, motorhome, pet, travel, landlord, lifestyle
+#   block) - zero life insurance products exist. Not a crawling problem;
+#   Tower doesn't sell what this vertical slice compares.
+# - AIA: re-confirmed still WAF-blocked (curl -v shows a clean TLS
+#   handshake, then the server kills the HTTP/2 stream with
+#   INTERNAL_ERROR the instant the real GET is sent) - identical
+#   signature to the original finding. No honest, non-evasive crawling
+#   path exists; not revisited.
 
 
 def discover_insurers() -> tuple[InsurerSeed, ...]:

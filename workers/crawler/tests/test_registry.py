@@ -26,3 +26,14 @@ def test_every_seed_has_document_hub_paths_to_probe():
         assert path.startswith("/")
     for insurer in discover_insurers():
         assert len(insurer.crawl_policy.document_hub_paths) > 0
+
+
+def test_aa_life_known_document_urls_are_all_on_a_trusted_domain():
+    """AA Life's real documents live on www.aa.co.nz, not
+    aainsurance.co.nz (its website_root) - every known_document_urls
+    entry must actually be covered by trusted_document_domains, or
+    _is_in_scope() would flag them all as off-domain."""
+    aa_life = next(i for i in discover_insurers() if i.name == "AA Life")
+    assert "www.aa.co.nz" in aa_life.crawl_policy.trusted_document_domains
+    for url in aa_life.crawl_policy.known_document_urls:
+        assert url.startswith("https://www.aa.co.nz/")

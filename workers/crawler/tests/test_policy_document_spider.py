@@ -166,6 +166,33 @@ def test_off_domain_pdfs_are_flagged_out_of_scope_not_dropped():
     assert items[0].get("in_scope") is False
 
 
+def test_trusted_document_domain_pdfs_are_in_scope_not_flagged_off_domain():
+    """Real gap found adding AA Life (2026-07-31): its actual policy
+    documents live on www.aa.co.nz, a genuinely-owned sibling of
+    aainsurance.co.nz (the insurance storefront), not a third party.
+    trusted_document_domains (registry.py) must exempt these from the
+    same off-domain check that correctly excludes a real third party's
+    document (e.g. Fidelity Life's FMA regulator PDF)."""
+    body = (
+        '<html><body>'
+        '<a href="https://www.aa.co.nz/content/dam/nzaa/life-cover.pdf">Life Cover Policy Wording</a>'
+        '<a href="https://www.fma.govt.nz/assets/some-licensing-guide.pdf">Untrusted third party</a>'
+        '</body></html>'
+    )
+    request = scrapy.Request(url="https://www.aainsurance.co.nz/life-insurance")
+    response = scrapy.http.HtmlResponse(
+        url="https://www.aainsurance.co.nz/life-insurance", body=body.encode("utf-8"),
+        encoding="utf-8", request=request,
+    )
+
+    spider = PolicyDocumentSpider(insurer="AA Life")
+    results = list(spider.parse(response))
+    items = {r.get("document_url"): r.get("in_scope") for r in results if isinstance(r, DiscoveredDocumentItem)}
+
+    assert items["https://www.aa.co.nz/content/dam/nzaa/life-cover.pdf"] is True
+    assert items["https://www.fma.govt.nz/assets/some-licensing-guide.pdf"] is False
+
+
 def test_zero_links_on_a_static_response_retries_with_playwright():
     body = "<html><body>No links here at all - just an empty SPA shell.</body></html>"
     response = _make_response(body, playwright_rendered=False)
