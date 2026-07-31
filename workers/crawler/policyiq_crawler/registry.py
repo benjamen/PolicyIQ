@@ -246,7 +246,21 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
             document_hub_paths=DEFAULT_DOCUMENT_HUB_PATHS + ("/nz-en/life.html", "/nz-en/life/life-and-living.html"),
         ),
     ),
-    InsurerSeed("MAS (Medical Assurance Society)", "https://www.mas.co.nz"),
+    InsurerSeed(
+        "MAS (Medical Assurance Society)", "https://www.mas.co.nz",
+        crawl_policy=CrawlPolicy(
+            # House/Contents/Motor Vehicle documents added 2026-08-01:
+            # confirmed live via mas.co.nz's own product-detail pages
+            # (not the generic /resources/insurance-resources/ listing,
+            # which showed a stale March-2022 set) - all three dated
+            # 1 July 2026, no WAF issue on this host.
+            known_document_urls=(
+                "https://www.mas.co.nz/documents/1338/House_Insurance_Policy_1_July_2026.pdf",
+                "https://www.mas.co.nz/documents/1344/Contents_Insurance_Policy_1_July_2026.pdf",
+                "https://www.mas.co.nz/documents/1346/Motor_Vehicle_Insurance_Policy_1_July_2026.pdf",
+            ),
+        ),
+    ),
     InsurerSeed("Pinnacle Life", "https://www.pinnaclelife.co.nz"),
     InsurerSeed(
         "AA Life",
@@ -339,6 +353,12 @@ GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
             # rather than relying on generic crawling to land on it.
             known_document_urls=(
                 "https://www.ami.co.nz/content/dam/insurance-brands-nz/ami/nz/en/documents/home-contents/ami-home-plus-contents-plus-insurance-policy-wording-ami1713-1-0824.pdf",
+                # Car insurance added 2026-08-01: real, current (v11, applies
+                # from 21 Nov 2024) - same WAF block as the home-contents
+                # document above (Akamai 403 for this project's honest
+                # User-Agent), placed the same one-off, human-verified way
+                # (genuine Playwright browser fetch, no header spoofing).
+                "https://www.ami.co.nz/content/dam/insurance-brands-nz/ami/nz/en/documents/car/ami-car-insurance-policy-wording-ami0052-11-1124.pdf",
             ),
         ),
     ),
@@ -354,6 +374,10 @@ GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
             known_document_urls=(
                 "https://www.tower.co.nz/wp-content/uploads/2021/03/house-plus-09-24.pdf",
                 "https://www.tower.co.nz/wp-content/uploads/2021/03/contents-plus-09-24.pdf",
+                # Car insurance added 2026-08-01: comprehensive cover
+                # wording, real and directly crawlable (no WAF issue,
+                # unlike AMI/State's car documents).
+                "https://www.tower.co.nz/wp-content/uploads/2021/03/Car_Comprehensive.pdf",
             ),
         ),
     ),
@@ -385,6 +409,26 @@ GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
             # fetched through the automated pipeline.
             known_document_urls=(
                 "https://www.state.co.nz/content/dam/insurance-brands-nz/state/nz/en/documents/home-contents/state-home-comprehensive-contents-comprehensive-insurance-policy-wording-si6995-2-1224.pdf",
+                # Car insurance added 2026-08-01: real, current (v5,
+                # 11/2024) - same WAF block as the home-contents document
+                # above, placed the same one-off, human-verified way
+                # (genuine Playwright browser fetch, no header spoofing).
+                "https://www.state.co.nz/content/dam/insurance-brands-nz/state/nz/en/documents/car/state-vehicle-car-insurance-policy-wording-si6737-5-1124.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "FMG", "https://www.fmg.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: linked directly from
+            # /what-we-cover/fmg-policy-wordings/buildings/home and
+            # .../contents-stock-and-equipment/household-contents. Real
+            # house and contents wordings are two separate documents
+            # (like Tower/Vero), both dated 1 July 2026, no WAF issue on
+            # this host.
+            known_document_urls=(
+                "https://www.fmg.co.nz/globalassets/what-we-cover/policy-wordings/policy-wordings-2026-27/home-policy-wording-july-26.pdf",
+                "https://www.fmg.co.nz/globalassets/what-we-cover/policy-wordings/policy-wordings-2026-27/household-contents-policy-wording-July-26.pdf",
             ),
         ),
     ),
