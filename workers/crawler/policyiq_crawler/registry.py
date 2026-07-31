@@ -150,7 +150,32 @@ class InsurerSeed:
 # crawl time, fetched fresh from a real deployment environment - this
 # registry only sets a conservative default request delay pending that.
 LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
-    InsurerSeed("AIA New Zealand", "https://www.aia.co.nz"),
+    # Reopened 2026-07-31: www.aia.co.nz's own WAF blocks this project's
+    # honestly-identified crawler (confirmed repeatedly - clean TLS
+    # handshake, then the server kills the HTTP/2 stream the instant a
+    # real GET is sent), but AIA's real, current "AIA Living" policy
+    # wordings are also hosted on docs.kiwicover.co.nz - KiwiCover is an
+    # AIA-focused, AIA-branded quote-comparison/broker site (confirmed:
+    # "Trusted AIA NZ Quote Comparison Site"), not an unrelated third
+    # party - the documents are the insurer's own real, current, official
+    # wordings (real version numbers, real "AIA LIVING" branding), same
+    # category as AA Life's real documents living on a sibling domain,
+    # not the off-domain regulator-PDF case this project correctly
+    # excludes elsewhere. Each URL individually verified live.
+    InsurerSeed(
+        "AIA New Zealand",
+        "https://www.aia.co.nz",
+        crawl_policy=CrawlPolicy(
+            trusted_document_domains=("docs.kiwicover.co.nz",),
+            known_document_urls=(
+                "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Umbrella-Policy-Wording.pdf?v=2026-05-12",
+                "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Life-Cover-Policy-Wording.pdf?v=2026-05-12",
+                "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Progressive-Care-Policy-Wording.pdf",
+                "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Income-Protection-Indemnity-Policy-Wording.pdf?v=2026-05-12",
+                "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Waiver-of-Premium-Policy-Wording.pdf?v=2019-08-05",
+            ),
+        ),
+    ),
     InsurerSeed("Partners Life", "https://www.partnerslife.co.nz"),
     InsurerSeed(
         "Fidelity Life",
@@ -264,11 +289,14 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
 #   business, EV, motorbike, motorhome, pet, travel, landlord, lifestyle
 #   block) - zero life insurance products exist. Not a crawling problem;
 #   Tower doesn't sell what this vertical slice compares.
-# - AIA: re-confirmed still WAF-blocked (curl -v shows a clean TLS
+# - AIA doesn't sell general/house insurance at all (life and health
+#   only) - not relevant to this general-insurance vertical regardless of
+#   the www.aia.co.nz WAF question. See LIFE_INSURER_SEED above for AIA's
+#   real life-insurance documents (reopened via docs.kiwicover.co.nz,
+#   same day) - www.aia.co.nz itself remains WAF-blocked for this
+#   project's honestly-identified crawler (curl -v shows a clean TLS
 #   handshake, then the server kills the HTTP/2 stream with
-#   INTERNAL_ERROR the instant the real GET is sent) - identical
-#   signature to the original finding. No honest, non-evasive crawling
-#   path exists; not revisited.
+#   INTERNAL_ERROR the instant the real GET is sent), unchanged.
 
 
 # General insurance (house/contents) vertical - started 2026-07-31, proving
