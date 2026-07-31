@@ -249,6 +249,11 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
             ),
             excluded_path_substrings=DEFAULT_EXCLUDED_PATH_SUBSTRINGS + (
                 "/15-nov-2024-v2/", "/10-july-2024-v2/", "/5-august-2029-v2/",
+                # A large real archive of press-release/award PDFs
+                # (2016-2020) lives under one consistent path prefix -
+                # cleaner to exclude by path than to chase every award
+                # name as a doctype.py keyword.
+                "/newsroom/",
             ),
         ),
     ),

@@ -20,9 +20,10 @@ PATTERNS: dict[str, tuple[str, ...]] = {
     # before the generic wording/pds keywords ever get a chance to match.
     "corporate_comms": (
         "investor news", "media release", "media statement", "whistleblowing",
-        "climate disclosure", "fair conduct programme", "sme index", "board and leadership",
-        "completes acquisition", "product updates and enhancements", "passback",
-        "onmas", "chairman report", "foundation report",
+        "climate disclosure", "climate statement", "fair conduct programme", "sme index",
+        "board and leadership", "completes acquisition", "product updates and enhancements",
+        "passback", "onmas", "chairman report", "foundation report", "sustainability report",
+        "ghg assurance", "newsroom", "corporate reputation", "consumer peoples choice",
     ),
     "investment_or_kiwisaver": (
         "kiwisaver", "retirement savings", "investment fund", "sipo",
