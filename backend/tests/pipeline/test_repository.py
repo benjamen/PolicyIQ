@@ -96,7 +96,16 @@ def test_malformed_graded_fact_is_skipped_not_a_500(session):
     assert profile.eligibility.age_min == 18
 
 
-def test_policy_version_without_general_eligibility_rule_is_excluded(session):
+def test_policy_version_without_general_eligibility_rule_is_shown_not_excluded(session):
+    """Real finding 2026-07-31: three insurers' own sites/documents
+    genuinely don't state a general applicant age range anywhere public
+    (verified directly via their websites, FAQs, and full policy
+    documents). Excluding them from compare() entirely - before compare()
+    ever gets to apply its own stated principle ("hiding a disqualified
+    product is itself an unsourced claim... the UI shouldn't make without
+    showing the reason") - just moves the same problem one step earlier.
+    A missing general rule now produces a wide 0-120 placeholder window
+    with eligibility_published=False, never a guessed real range."""
     pv = _make_policy_version(session)
     # No general EligibilityRule row at all for this policy_version.
     session.add(GradedFact(
@@ -107,7 +116,10 @@ def test_policy_version_without_general_eligibility_rule_is_excluded(session):
 
     profiles = load_product_profiles(session, product_type="life_cover")
 
-    assert profiles == []
+    assert len(profiles) == 1
+    assert profiles[0].eligibility.eligibility_published is False
+    assert profiles[0].eligibility.age_min == 0
+    assert profiles[0].eligibility.age_max == 120
 
 
 def test_zero_policy_versions_for_product_type_returns_empty_list(session):

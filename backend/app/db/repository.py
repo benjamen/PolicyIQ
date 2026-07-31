@@ -85,17 +85,26 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
 
         general_rule = next((r for r in eligibility_rules if r.occupation_category_id is None), None)
         if general_rule is None:
-            logger.info(
-                "excluding policy_version %s (%s / %s): no general eligibility rule extracted yet",
+            # Not excluded - per compare()'s own principle ("hiding a
+            # disqualified product is itself an unsourced claim"), hiding
+            # an *eligible* product before compare() ever sees it is the
+            # same problem one step earlier. age_min=0/age_max=120 is a
+            # wide placeholder, never a guessed real range -
+            # eligibility_published=False is what actually carries the
+            # "we don't know" signal through to check_eligibility() and
+            # the API response.
+            logger.warning(
+                "policy_version %s (%s / %s): no general eligibility rule extracted - "
+                "showing with eligibility_published=False rather than excluding",
                 policy_version.id, insurer.name, policy.name,
             )
-            continue
-
-        eligibility = EligibilityWindow(
-            age_min=general_rule.age_min,
-            age_max=general_rule.age_max,
-            smoker_status_available=SmokerStatus(general_rule.smoker_status),
-        )
+            eligibility = EligibilityWindow(age_min=0, age_max=120, eligibility_published=False)
+        else:
+            eligibility = EligibilityWindow(
+                age_min=general_rule.age_min,
+                age_max=general_rule.age_max,
+                smoker_status_available=SmokerStatus(general_rule.smoker_status),
+            )
 
         occupation_category_ids = {
             r.occupation_category_id for r in eligibility_rules if r.occupation_category_id is not None

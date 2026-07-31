@@ -79,7 +79,11 @@ def _clamp(value: float, low: float = 0.0, high: float = 100.0) -> float:
 
 def check_eligibility(profile: ProductProfile, filters: CompareFilters) -> tuple[bool, str | None]:
     window = profile.eligibility
-    if not (window.age_min <= filters.age <= window.age_max):
+    # window.eligibility_published=False means age_min=0/age_max=120 is a
+    # wide placeholder (repository.py), not a real extracted range - never
+    # treat it as a real age exclusion. Real occupation/smoker exclusions
+    # below are unaffected; they only fire when actually extracted.
+    if window.eligibility_published and not (window.age_min <= filters.age <= window.age_max):
         return False, f"Age {filters.age} outside product's {window.age_min}-{window.age_max} range"
 
     if (
@@ -95,6 +99,12 @@ def check_eligibility(profile: ProductProfile, filters: CompareFilters) -> tuple
             and restriction.restriction_type == RestrictionType.EXCLUSION
         ):
             return False, f"Occupation category '{filters.occupation_category}' excluded: {restriction.note}"
+
+    if not window.eligibility_published:
+        return True, (
+            "Eligibility age range not published by this insurer - shown as eligible by "
+            "default; confirm directly with the insurer"
+        )
 
     return True, None
 

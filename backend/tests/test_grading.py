@@ -55,6 +55,35 @@ class TestEligibility:
         assert eligible is False
         assert "outside" in reason
 
+    def test_unpublished_eligibility_defaults_to_eligible_with_advisory_reason(self):
+        """Real finding 2026-07-31: three insurers genuinely don't publish
+        a general applicant age range anywhere public. The 0-120
+        placeholder window (repository.py) must never act as a real age
+        filter - any age passes - but the caller should still learn that
+        eligibility here is unconfirmed, not silently identical to a real
+        published 'no restriction' answer."""
+        profile = make_profile(eligibility=EligibilityWindow(age_min=0, age_max=120, eligibility_published=False))
+        eligible, reason = check_eligibility(profile, make_filters(age=90))
+        assert eligible is True
+        assert reason is not None
+        assert "not published" in reason
+
+    def test_unpublished_eligibility_does_not_mask_a_real_occupation_exclusion(self):
+        profile = make_profile(
+            eligibility=EligibilityWindow(age_min=0, age_max=120, eligibility_published=False),
+            occupation_restrictions=(
+                OccupationRestriction(
+                    occupation_category="Professional",
+                    restriction_type=RestrictionType.EXCLUSION,
+                    note="Not offered to this occupation class",
+                    source=SRC,
+                ),
+            ),
+        )
+        eligible, reason = check_eligibility(profile, make_filters())
+        assert eligible is False
+        assert "excluded" in reason
+
     def test_occupation_exclusion_makes_ineligible(self):
         profile = make_profile(
             occupation_restrictions=(

@@ -82,6 +82,19 @@ class EligibilityWindow:
     age_min: int
     age_max: int
     smoker_status_available: SmokerStatus = SmokerStatus.ANY
+    # False when no general EligibilityRule was extracted for this
+    # PolicyVersion (age_min/age_max are then a wide 0-120 placeholder,
+    # never a guessed real range) - see repository.py's
+    # load_product_profiles() and grading.py's check_eligibility(). Real
+    # gap found 2026-07-31: three insurers' own sites/documents genuinely
+    # don't state a general applicant age range anywhere public (verified
+    # directly - Chubb does state one, "18 to 70", and gets a real rule
+    # instead). compare()'s own docstring already establishes the
+    # principle this exists to honour: "hiding a disqualified product is
+    # itself an unsourced claim... the UI shouldn't make without showing
+    # the reason" - the same applies to hiding an *eligible* product
+    # before compare() ever sees it.
+    eligibility_published: bool = True
 
 
 @dataclass(frozen=True)
