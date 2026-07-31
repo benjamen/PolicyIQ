@@ -793,43 +793,65 @@
         </div>
       </div>
 
-      <!-- ---- General insurance: existing document-diff comparison ---- -->
+      <!-- ---- General insurance: document-diff comparison ---- -->
       <div class="compare-panel" id="compare-general">
         <div class="section-head" style="margin-top:0">
-          <h2>Contents insurance — AMI vs Tower</h2>
-          <div style="display:flex;gap:8px">
-            <button class="btn-ghost">Export PDF</button>
-            <button class="btn-ghost">Export Excel</button>
+          <h2 id="general-heading">Home &amp; Contents insurance</h2>
+          <span class="pill neutral" id="general-data-source-pill">Synthetic fixture data — pending live crawl</span>
+        </div>
+        <!-- Demo control: not part of the shipped product — lets this static mockup show the
+             loading/error/loaded states without a live backend. -->
+        <div class="demo-state-toggle" role="group" aria-label="Demo: general comparison load state">
+          <button class="on" data-demo-general-state="loaded" type="button">Loaded</button>
+          <button data-demo-general-state="loading" type="button">Loading</button>
+          <button data-demo-general-state="error" type="button">Error</button>
+        </div>
+        <div class="grade-board" id="compare-general-loading" style="display:none">
+          <div class="card skeleton-card">
+            <div class="skeleton skeleton-line" style="width:60%;height:16px"></div>
+            <div class="skeleton skeleton-line" style="width:90%"></div>
+            <div class="skeleton skeleton-line" style="width:75%"></div>
           </div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr><th style="width:22%">Attribute</th><th>AMI Contents v6</th><th>Tower Contents v7</th></tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Temporary accommodation</td>
-                <td>$2,500 max, 14 days<span class="loc-ref">p.9 · §5.1</span></td>
-                <td class="compare-cell-diff">$3,500 max, 21 days<span class="loc-ref">p.9 · §5.1 — increased this week</span></td>
-              </tr>
-              <tr>
-                <td>Electric vehicle charging cable</td>
-                <td class="compare-cell-missing">Not covered</td>
-                <td>Covered, up to $1,000<span class="loc-ref">p.14 · §7.4</span></td>
-              </tr>
-              <tr>
-                <td>Portable electronics excess</td>
-                <td>$400<span class="loc-ref">p.6 · §2.3</span></td>
-                <td>$250<span class="loc-ref">p.5 · §2.1</span></td>
-              </tr>
-              <tr>
-                <td>Gradual damage exclusion</td>
-                <td>Excluded — all causes<span class="loc-ref">p.18 · §9.2</span></td>
-                <td>Excluded — except plumbing leaks<span class="loc-ref">p.16 · §8.9</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="card error-card" id="compare-general-error" style="display:none">
+          <span class="ic">⚠</span>
+          <div class="msg">
+            <b>Couldn't load comparison</b>
+            The comparison service didn't respond. Retry when ready.
+          </div>
+          <button class="btn-ghost" id="btn-retry-general">Retry</button>
+        </div>
+        <div id="compare-general-loaded">
+          <div class="table-wrap">
+            <table id="general-table">
+              <thead>
+                <tr><th style="width:22%">Attribute</th><th>AMI Contents v6</th><th>Tower Contents v7</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Temporary accommodation</td>
+                  <td>$2,500 max, 14 days<span class="loc-ref">p.9 · §5.1</span></td>
+                  <td class="compare-cell-diff">$3,500 max, 21 days<span class="loc-ref">p.9 · §5.1 — increased this week</span></td>
+                </tr>
+                <tr>
+                  <td>Electric vehicle charging cable</td>
+                  <td class="compare-cell-missing">Not covered</td>
+                  <td>Covered, up to $1,000<span class="loc-ref">p.14 · §7.4</span></td>
+                </tr>
+                <tr>
+                  <td>Portable electronics excess</td>
+                  <td>$400<span class="loc-ref">p.6 · §2.3</span></td>
+                  <td>$250<span class="loc-ref">p.5 · §2.1</span></td>
+                </tr>
+                <tr>
+                  <td>Gradual damage exclusion</td>
+                  <td>Excluded — all causes<span class="loc-ref">p.18 · §9.2</span></td>
+                  <td>Excluded — except plumbing leaks<span class="loc-ref">p.16 · §8.9</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="grade-footnote">Rows group real extracted facts by topic (retaining walls, temporary accommodation, specified-item sub-limits, exclusions) — insurers with no matching fact for a topic show "not found", never a guess. <span id="general-live-mode-note" style="display:none">Loaded live from <code class="mono">/api/v1/compare/general</code> — see <code class="mono">?live=1</code> in this page's URL.</span></p>
         </div>
       </div>
     </section>
@@ -1122,6 +1144,132 @@
     // Not live: cycle loading -> loaded so the state transition is visible without a backend.
     setCompareState('loading');
     setTimeout(() => setCompareState('loaded'), 700);
+  });
+
+  /* ---- Compare > General Insurance: loading / error / loaded demo states ---- */
+  const demoGeneralStateBtns = document.querySelectorAll('[data-demo-general-state]');
+  const generalBlocks = {
+    loading: document.getElementById('compare-general-loading'),
+    error: document.getElementById('compare-general-error'),
+    loaded: document.getElementById('compare-general-loaded'),
+  };
+  function setGeneralCompareState(state) {
+    Object.entries(generalBlocks).forEach(([key, el]) => {
+      el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
+    });
+    demoGeneralStateBtns.forEach(b => b.classList.toggle('on', b.dataset.demoGeneralState === state));
+  }
+  demoGeneralStateBtns.forEach(b => b.addEventListener('click', () => setGeneralCompareState(b.dataset.demoGeneralState)));
+  document.getElementById('btn-retry-general').addEventListener('click', () => setGeneralCompareState('loading'));
+
+  const generalDataSourcePill = document.getElementById('general-data-source-pill');
+  function setGeneralDataSource(source) {
+    generalDataSourcePill.textContent = source === 'extracted_verified'
+      ? 'Live, citation-verified data'
+      : 'Synthetic fixture data — pending live crawl';
+    generalDataSourcePill.classList.toggle('ok', source === 'extracted_verified');
+    generalDataSourcePill.classList.toggle('neutral', source !== 'extracted_verified');
+  }
+
+  // Groups heterogeneous real facts (each insurer extracted its own set - AMI's "Walls,
+  // including garden and retaining walls" benefit vs Tower's "Garden retaining walls (total)"
+  // $25,000 limit aren't the same shape) into aligned rows by topic keyword, so genuinely
+  // comparable facts land in the same row without fabricating a shared schema across insurers.
+  // A fact that matches no topic still isn't lost - it gets its own single-insurer row.
+  const GENERAL_TOPICS = [
+    { label: 'Retaining walls', match: /retaining wall/i },
+    { label: 'Temporary / alternative accommodation', match: /temporary accommodation|alternative accommodation/i },
+    { label: 'Jewellery / watches', match: /jewellery/i },
+    { label: 'Cameras', match: /camera/i },
+    { label: 'Watercraft', match: /watercraft/i },
+    { label: 'Money / negotiable documents', match: /money|negotiable/i },
+    { label: 'Vermin / pest exclusion', match: /vermin|insects|rodents/i },
+    { label: 'Structural alteration exclusion', match: /structural addition|structural alteration/i },
+  ];
+
+  function escapeHtmlGeneral(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+  }
+
+  function renderGeneralTable(results) {
+    const table = document.getElementById('general-table');
+    if (!results || results.length === 0) {
+      table.innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-faint)">No general insurance data available yet.</td></tr></tbody>';
+      return;
+    }
+    const insurers = results.map(r => r.insurer);
+    const usedFactIndex = results.map(() => new Set());
+
+    const rows = [];
+    for (const topic of GENERAL_TOPICS) {
+      const cells = results.map((r, i) => {
+        const idx = r.facts.findIndex((f, fi) => !usedFactIndex[i].has(fi) && topic.match.test(f.name));
+        if (idx === -1) return null;
+        usedFactIndex[i].add(idx);
+        return r.facts[idx];
+      });
+      if (cells.every(c => c === null)) continue;
+      rows.push({ label: topic.label, cells });
+    }
+    // Leftover facts that matched no topic - grouped by exact name match across insurers
+    // (e.g. AMI and State share the same underwriter's template, so identically-named
+    // facts merge into one row instead of two near-duplicate single-insurer rows), still
+    // shown even when only one insurer has them.
+    const leftoverByName = new Map();
+    results.forEach((r, i) => {
+      r.facts.forEach((f, fi) => {
+        if (usedFactIndex[i].has(fi)) return;
+        if (!leftoverByName.has(f.name)) leftoverByName.set(f.name, results.map(() => null));
+        leftoverByName.get(f.name)[i] = f;
+      });
+    });
+    leftoverByName.forEach((cells, label) => rows.push({ label, cells }));
+
+    const theadHtml = `<tr><th style="width:22%">Attribute</th>${insurers.map(name => `<th>${escapeHtmlGeneral(name)}</th>`).join('')}</tr>`;
+    const tbodyHtml = rows.map(row => {
+      const cellsHtml = row.cells.map(f => {
+        if (!f) return '<td class="compare-cell-missing">Not found</td>';
+        const value = f.category === 'exclusion' ? `Excluded — ${f.name}` : (f.detail || f.name);
+        const locRef = f.source ? `<span class="loc-ref">p.${f.source.page} · ${escapeHtmlGeneral(f.source.document)}</span>` : '';
+        return `<td>${escapeHtmlGeneral(value)}${locRef}</td>`;
+      }).join('');
+      return `<tr><td>${escapeHtmlGeneral(row.label)}</td>${cellsHtml}</tr>`;
+    }).join('');
+
+    table.innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
+  }
+
+  async function fetchGeneralComparison() {
+    setGeneralCompareState('loading');
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/compare/general`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_type: 'home_contents' }),
+      });
+      if (res.status === 401) { showLogin(); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setGeneralDataSource(data.data_source);
+      renderGeneralTable(data.results);
+      document.getElementById('general-live-mode-note').style.display = 'inline';
+      setGeneralCompareState('loaded');
+    } catch (err) {
+      setGeneralCompareState('error');
+    }
+  }
+
+  let generalFetchedOnce = false;
+  segTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      if (isLive && tab.dataset.compareMode === 'general' && !generalFetchedOnce) {
+        generalFetchedOnce = true;
+        fetchGeneralComparison();
+      }
+    });
   });
 
   /* ---- Account: API key demo interactions (static, no backend) ---- */
