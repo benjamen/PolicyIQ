@@ -296,6 +296,52 @@ GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
             ),
         ),
     ),
+    InsurerSeed(
+        "Tower",
+        "https://www.tower.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-07-31: linked directly from /house-
+            # insurance and /contents-insurance. Tower publishes 3 tiers
+            # (Standard/Plus/Premium) for each - "Plus" seeded to match
+            # AMI's "Home Plus and Contents Plus" coverage level for a
+            # fair apples-to-apples comparison, not the full 6-document set.
+            known_document_urls=(
+                "https://www.tower.co.nz/wp-content/uploads/2021/03/house-plus-09-24.pdf",
+                "https://www.tower.co.nz/wp-content/uploads/2021/03/contents-plus-09-24.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "Vero",
+        "https://www.vero.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-07-31: linked directly from /personal-
+            # insurance/house-insurance.html and /personal-insurance/
+            # contents-insurance.html. Single tier each (no Plus/Premium
+            # split like Tower).
+            known_document_urls=(
+                "https://www.vero.co.nz/documents/personal-insurance/vero-residential-home-policy-0724.pdf",
+                "https://www.vero.co.nz/documents/personal-insurance/vero-residential-contents-policy-0724.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "State",
+        "https://www.state.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-07-31: linked directly from /home-
+            # contents-insurance (combined Home Comprehensive + Contents
+            # Comprehensive document, same structure as AMI's). State's
+            # PDF-download endpoint WAF-blocks this project's honestly-
+            # identified crawler (confirmed: PolicyIQNZBot's real User-
+            # Agent gets 403, same as AMI) - the real file was placed via
+            # the same one-off, human-verified pattern as AMI's, not
+            # fetched through the automated pipeline.
+            known_document_urls=(
+                "https://www.state.co.nz/content/dam/insurance-brands-nz/state/nz/en/documents/home-contents/state-home-comprehensive-contents-comprehensive-insurance-policy-wording-si6995-2-1224.pdf",
+            ),
+        ),
+    ),
 )
 
 
