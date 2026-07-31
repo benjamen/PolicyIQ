@@ -13,7 +13,15 @@ app = FastAPI(
 
 # "null" is the Origin browsers send for file:// pages (e.g. running site/index.html directly
 # in local dev) - listed for local testing convenience only, not a production concern.
-_DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:8000,https://benjamen.github.io,null"
+#
+# https://policyiq.nz is the real deployed frontend (GitHub Pages, custom domain) - confirmed
+# missing 2026-07-31 via a live end-to-end browser test: the site's own `?live=1` mode has been
+# unable to load real data since deployment because this list only ever had the GitHub Pages
+# default domain (benjamen.github.io), never the custom domain it actually moved to.
+_DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5173,http://localhost:8000,"
+    "https://benjamen.github.io,https://policyiq.nz,https://www.policyiq.nz,null"
+)
 allowed_origins = os.environ.get("CORS_ALLOWED_ORIGINS", _DEFAULT_CORS_ORIGINS).split(",")
 
 app.add_middleware(

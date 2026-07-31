@@ -19,11 +19,13 @@ def session():
 def test_first_run_inserts_exactly_the_seed_set(session):
     inserted = seed_life_insurers(session)
 
-    assert inserted == 7
+    # 8, not 7, since AA Life was added to the registry 2026-07-31.
+    assert inserted == 8
     names = {row.name for row in session.execute(select(Insurer)).scalars()}
     assert "AIA New Zealand" in names
     assert "Partners Life" in names
-    assert len(names) == 7
+    assert "AA Life" in names
+    assert len(names) == 8
 
 
 def test_second_run_is_a_noop_and_preserves_manual_edits(session):
