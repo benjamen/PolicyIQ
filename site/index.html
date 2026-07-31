@@ -1028,21 +1028,33 @@
   }
 
   // Same topic-keyword grouping approach as GENERAL_TOPICS above, tuned to the
-  // real facts extracted so far for Southern Cross (UltraCare) and nib (Premium
-  // Hospital) - e.g. both exclude the same rare congenital conditions (cystic
+  // real facts extracted so far across Southern Cross (UltraCare), nib
+  // (Premium Hospital), AIA (Private Health), and UniMed (Hospital Select) -
+  // e.g. all four exclude/cover the same rare congenital conditions (cystic
   // fibrosis, Marfan's, kyphosis), and SC's "Gastric banding or bypass
   // allowance" benefit lines up meaningfully against nib's "weight loss or
   // bariatric" exclusion (a benefit vs. an exclusion is itself the real,
   // useful comparison signal, not a data mismatch).
   const HEALTH_TOPICS = [
     { label: 'Home nursing / home care', match: /home (nursing|care)/i },
-    { label: 'Congenital / chronic conditions exclusion', match: /congenital|chronic condition|cystic fibrosis|marfan|kyphosis|scoliosis/i },
+    // Deliberately does NOT match on the bare word "congenital" - AIA also has an
+    // unrelated "Congenital Conditions Surgery Benefit" (hernia/undescended testes
+    // surgery cover, nothing to do with the rare-disease exclusion below) that would
+    // otherwise be wrongly grouped into this row.
+    { label: 'Congenital / chronic conditions exclusion', match: /chronic condition|specified condition|genetic, or hereditary|cystic fibrosis|marfan|kyphosis|scoliosis/i },
     { label: 'Gastric banding / bariatric / weight loss', match: /gastric|bariatric|weight loss/i },
     { label: 'Pre-existing conditions exclusion', match: /pre-existing/i },
     { label: 'Cosmetic exclusion', match: /cosmetic/i },
     { label: 'Cancer treatment', match: /cancer|chemotherapy/i },
     { label: 'Physiotherapy', match: /physiotherapy/i },
-    { label: 'Surgical benefit', match: /surgical (procedures|benefit)/i },
+    { label: 'Surgical benefit', match: /surgical (procedures|benefit)|^surgery$/i },
+    { label: 'Diagnostic imaging & tests', match: /diagnostic|imaging|ct, mri/i },
+    { label: 'Bereavement / funeral support', match: /bereavement|funeral/i },
+    { label: 'Sterilisation', match: /sterilisation/i },
+    { label: 'Obstetrics', match: /obstetric/i },
+    { label: 'Ambulance', match: /ambulance/i },
+    { label: 'Minor surgery', match: /minor surgery/i },
+    { label: 'Skin lesion', match: /skin lesion/i },
   ];
 
   function escapeHtmlHealth(str) {

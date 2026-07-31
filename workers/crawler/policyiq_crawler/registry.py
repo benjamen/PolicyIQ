@@ -173,6 +173,14 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
                 "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Progressive-Care-Policy-Wording.pdf",
                 "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Income-Protection-Indemnity-Policy-Wording.pdf?v=2026-05-12",
                 "https://docs.kiwicover.co.nz/policy-wordings/AIA-Living-Waiver-of-Premium-Policy-Wording.pdf?v=2019-08-05",
+                # Health insurance product added 2026-07-31: AIA Private
+                # Health's real, current (version 7, effective 12 May 2026)
+                # umbrella policy wording - same docs.kiwicover.co.nz
+                # broker mirror as the life documents above (one InsurerSeed
+                # per insurer, not per product-type - the setup script that
+                # persists this into the DB is what assigns product_type
+                # "health" vs "life_cover" per document).
+                "https://docs.kiwicover.co.nz/policy-wordings/AIA-Private-Health-Umbrella-Policy-Wording.pdf",
             ),
         ),
     ),
@@ -306,9 +314,19 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
 # Vero, State are directly crawlable (real policy wording PDFs linked right
 # on their product pages); NZI's documents sit behind an interactive
 # search form (select Insurance type + Brand, then submit) this crawler
-# can't drive yet; AA Insurance's obvious "Policy documents" link is a
-# login-gated customer portal, not a public PDS - its real public document
-# wasn't found in this pass.
+# can't drive yet - re-confirmed 2026-07-31 via direct fetch of two real,
+# individually-verified nzi.co.nz document URLs (Distinction Home/Contents
+# wordings): both robots.txt and the documents themselves return a clean
+# Akamai 403 "Access Denied" for this project's honest User-Agent, the
+# same WAF-blocked category as www.aia.co.nz, not just a form-driving
+# problem; AA Insurance's obvious "Policy documents" link (re-checked
+# 2026-07-31 at aainsurance.co.nz/manage-policy/policy-documents/...) is
+# confirmed still a login-gated customer portal (returns an HTML login
+# page, not a PDF) - its real public document wasn't found in this pass.
+# Note: theaa.com ("The AA", UK) publishes similarly-named policy
+# booklets under an "AA" brand too - a genuinely different organisation
+# in a different country/regulatory regime, not a substitute source for
+# AA Insurance NZ.
 GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
     InsurerSeed(
         "AMI",
@@ -428,6 +446,24 @@ HEALTH_INSURER_SEED: tuple[InsurerSeed, ...] = (
             trusted_document_domains=("assets.ctfassets.net",),
             known_document_urls=(
                 "https://assets.ctfassets.net/ja9v5o5o08yv/4B7F1fUvBXfP3RwwbJ8RG4/16b351dee312ac8c603ff884df59f8bb/premium-hospital-policy-from-24-Nov-2025.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "UniMed",
+        "https://unimed.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-07-31: UniMed's own health-plans pages
+            # describe "Hospital Select" as their most extensive plan
+            # (unlimited eligible surgical cover) - the flagship,
+            # comparable in role to Southern Cross's UltraCare and nib's
+            # Premium Hospital. Document dated 1 August 2025, linked
+            # directly from unimed.co.nz/health-plans/hospital-select.
+            # This is the real current insurer for Accuro's former book
+            # (see the note above HEALTH_INSURER_SEED) - Accuro itself is
+            # not seeded separately.
+            known_document_urls=(
+                "https://unimed.co.nz/assets/PlansAndDocs/Health-Plans/Hospital_Select_Plus_Modules_Plan.pdf",
             ),
         ),
     ),
