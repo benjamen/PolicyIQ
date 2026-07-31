@@ -20,9 +20,24 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, EligibilityRule, GradedFact, Insurer, OccupationCategory, Policy, PolicyVersion, Product
+from app.db.models import (
+    Benefit,
+    Document,
+    EligibilityRule,
+    Exclusion,
+    GradedFact,
+    Insurer,
+    Limit,
+    OccupationCategory,
+    Policy,
+    PolicyVersion,
+    Product,
+    Section,
+)
 from app.domain.models import (
     EligibilityWindow,
+    GeneralInsuranceFact,
+    GeneralProductProfile,
     OccupationRestriction,
     PremiumBasis,
     PremiumStructure,
@@ -227,6 +242,81 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
                 waiver_of_premium_source=waiver_of_premium_source,
                 automatic_benefits_count=automatic_benefits_count,
                 automatic_benefits_source=automatic_benefits_source,
+            )
+        )
+
+    return profiles
+
+
+def _general_source_ref(insurer_name: str, fact_row, sections_by_id: dict[uuid.UUID, Section],
+                         documents_by_id: dict[uuid.UUID, Document]) -> SourceRef | None:
+    """Benefit/Limit/Exclusion carry page/paragraph_ref/confidence directly
+    (unlike GradedFact/EligibilityRule) but only a section_id, not a
+    document_id - one extra hop through Section to find the document."""
+    section = sections_by_id.get(fact_row.section_id)
+    if section is None:
+        return None
+    return SourceRef(
+        insurer=insurer_name,
+        document=_document_label(documents_by_id.get(section.document_id)),
+        page=fact_row.page,
+        paragraph_ref=fact_row.paragraph_ref,
+        confidence=fact_row.confidence,
+    )
+
+
+def load_general_insurance_profiles(session: Session, *, product_type: str) -> list[GeneralProductProfile]:
+    """General (house/contents/travel) insurance is compared as a document
+    diff, not a graded score (docs/08-UI-DESIGN.md) - this returns the raw
+    real, citation-verified Benefit/Limit/Exclusion facts per insurer for a
+    product type, with no weighting/scoring layer on top. Fail-closed like
+    load_product_profiles(): zero matching PolicyVersions returns []."""
+    rows = session.execute(
+        select(PolicyVersion, Policy, Product, Insurer)
+        .join(Policy, PolicyVersion.policy_id == Policy.id)
+        .join(Product, Policy.product_id == Product.id)
+        .join(Insurer, Product.insurer_id == Insurer.id)
+        .where(Product.product_type == product_type, PolicyVersion.status == "current")
+    ).all()
+
+    profiles: list[GeneralProductProfile] = []
+    for policy_version, policy, product, insurer in rows:
+        sections_by_id = {
+            s.id: s
+            for s in session.execute(
+                select(Section).where(Section.policy_version_id == policy_version.id)
+            ).scalars()
+        }
+        document_ids = {s.document_id for s in sections_by_id.values()}
+        documents_by_id = {
+            d.id: d for d in session.execute(select(Document).where(Document.id.in_(document_ids))).scalars()
+        }
+        section_ids = list(sections_by_id.keys())
+
+        facts: list[GeneralInsuranceFact] = []
+        for b in session.execute(select(Benefit).where(Benefit.section_id.in_(section_ids))).scalars():
+            facts.append(GeneralInsuranceFact(
+                category="benefit", name=b.name, detail=b.description,
+                source=_general_source_ref(insurer.name, b, sections_by_id, documents_by_id),
+            ))
+        for lim in session.execute(select(Limit).where(Limit.section_id.in_(section_ids))).scalars():
+            facts.append(GeneralInsuranceFact(
+                category="limit", name=lim.limit_type, detail=f"{lim.currency} {lim.amount:,.0f}",
+                source=_general_source_ref(insurer.name, lim, sections_by_id, documents_by_id),
+            ))
+        for ex in session.execute(select(Exclusion).where(Exclusion.section_id.in_(section_ids))).scalars():
+            facts.append(GeneralInsuranceFact(
+                category="exclusion", name=ex.description, detail=None,
+                source=_general_source_ref(insurer.name, ex, sections_by_id, documents_by_id),
+            ))
+
+        profiles.append(
+            GeneralProductProfile(
+                insurer=insurer.name,
+                product_name=policy.name,
+                policy_version_id=str(policy_version.id),
+                product_type=product.product_type,
+                facts=tuple(facts),
             )
         )
 

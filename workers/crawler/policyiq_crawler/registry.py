@@ -271,6 +271,34 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
 #   path exists; not revisited.
 
 
+# General insurance (house/contents) vertical - started 2026-07-31, proving
+# the pattern on one insurer before scaling the registry (see
+# docs/07-ROADMAP.md's original Phase 1 scope: AA Insurance, AMI, State,
+# Tower, NZI, Vero). Crawlability researched live for all 6: AMI, Tower,
+# Vero, State are directly crawlable (real policy wording PDFs linked right
+# on their product pages); NZI's documents sit behind an interactive
+# search form (select Insurance type + Brand, then submit) this crawler
+# can't drive yet; AA Insurance's obvious "Policy documents" link is a
+# login-gated customer portal, not a public PDS - its real public document
+# wasn't found in this pass.
+GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
+    InsurerSeed(
+        "AMI",
+        "https://www.ami.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-07-31: linked directly from
+            # /home-contents-insurance, a real product page reachable from
+            # the homepage - seeded directly (matching the established
+            # "real, individually-verified" known_document_urls pattern)
+            # rather than relying on generic crawling to land on it.
+            known_document_urls=(
+                "https://www.ami.co.nz/content/dam/insurance-brands-nz/ami/nz/en/documents/home-contents/ami-home-plus-contents-plus-insurance-policy-wording-ami1713-1-0824.pdf",
+            ),
+        ),
+    ),
+)
+
+
 def discover_insurers() -> tuple[InsurerSeed, ...]:
     """Returns the current insurer seed set.
 
@@ -283,4 +311,4 @@ def discover_insurers() -> tuple[InsurerSeed, ...]:
     checkpoint rather than a fully automatic add.
     """
 
-    return LIFE_INSURER_SEED
+    return LIFE_INSURER_SEED + GENERAL_INSURER_SEED

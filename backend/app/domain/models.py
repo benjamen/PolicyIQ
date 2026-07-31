@@ -126,6 +126,31 @@ class ProductProfile:
 
 
 @dataclass(frozen=True)
+class GeneralInsuranceFact:
+    """One extracted fact about a general (house/contents/travel) insurance
+    product - a benefit, a per-item sub-limit, or an exclusion. Unlike life
+    insurance's fixed set of weighted GradedFact criteria, general insurance
+    is compared as a document diff (docs/08-UI-DESIGN.md's "General
+    Insurance" mode was always planned this way, not a graded score) - so
+    this is a flat, uniform shape covering all three fact kinds rather than
+    named criteria fields."""
+
+    category: str  # "benefit" | "limit" | "exclusion"
+    name: str
+    detail: str | None
+    source: SourceRef | None
+
+
+@dataclass(frozen=True)
+class GeneralProductProfile:
+    insurer: str
+    product_name: str
+    policy_version_id: str
+    product_type: str
+    facts: tuple[GeneralInsuranceFact, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
 class CompareFilters:
     age: int
     smoker_status: SmokerStatus

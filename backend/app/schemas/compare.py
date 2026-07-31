@@ -54,3 +54,27 @@ class CompareResponse(BaseModel):
     filters: CompareRequest
     results: list[GradeReportOut]
     data_source: DataSource
+
+
+class GeneralInsuranceFactOut(BaseModel):
+    category: str
+    name: str
+    detail: str | None
+    source: SourceRefOut | None
+
+
+class GeneralProductProfileOut(BaseModel):
+    insurer: str
+    product_name: str
+    policy_version_id: str
+    facts: list[GeneralInsuranceFactOut]
+
+
+class CompareGeneralRequest(BaseModel):
+    product_type: str = "home_contents"
+
+
+class CompareGeneralResponse(BaseModel):
+    filters: CompareGeneralRequest
+    results: list[GeneralProductProfileOut]
+    data_source: DataSource

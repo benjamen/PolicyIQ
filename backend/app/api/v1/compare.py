@@ -3,14 +3,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.db.repository import load_product_profiles
+from app.db.repository import load_general_insurance_profiles, load_product_profiles
 from app.db.session import get_db
 from app.domain.models import CompareFilters
 from app.schemas.compare import (
+    CompareGeneralRequest,
+    CompareGeneralResponse,
     CompareRequest,
     CompareResponse,
     CriterionOut,
     DataSource,
+    GeneralInsuranceFactOut,
+    GeneralProductProfileOut,
     GradeReportOut,
     SourceRefOut,
 )
@@ -68,6 +72,46 @@ def compare_life_insurance(request: CompareRequest, session: Session = Depends(g
     ]
 
     return CompareResponse(
+        filters=request,
+        results=results,
+        data_source=DataSource.EXTRACTED_VERIFIED,
+    )
+
+
+@router.post("/general", response_model=CompareGeneralResponse)
+def compare_general_insurance(
+    request: CompareGeneralRequest, session: Session = Depends(get_db)
+) -> CompareGeneralResponse:
+    """General (house/contents/travel) insurance comparison - a document
+    diff of real, citation-verified benefits/sub-limits/exclusions per
+    insurer, not a graded score (docs/08-UI-DESIGN.md's General Insurance
+    mode was always planned this way - unlike life insurance's fixed
+    TPD/trauma/premium/waiver/automatic-benefits criteria, "which insurer
+    covers retaining walls, and for how much" doesn't reduce to a single
+    weighted number). Fail-closed: no matching product_type returns an
+    empty `results` list, never placeholder data.
+    """
+    profiles = load_general_insurance_profiles(session, product_type=request.product_type)
+
+    results = [
+        GeneralProductProfileOut(
+            insurer=p.insurer,
+            product_name=p.product_name,
+            policy_version_id=p.policy_version_id,
+            facts=[
+                GeneralInsuranceFactOut(
+                    category=f.category,
+                    name=f.name,
+                    detail=f.detail,
+                    source=SourceRefOut(**f.source.__dict__) if f.source else None,
+                )
+                for f in p.facts
+            ],
+        )
+        for p in profiles
+    ]
+
+    return CompareGeneralResponse(
         filters=request,
         results=results,
         data_source=DataSource.EXTRACTED_VERIFIED,

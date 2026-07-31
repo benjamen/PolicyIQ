@@ -19,14 +19,18 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.models import (
     Base,
+    Benefit,
     Document,
     EligibilityRule,
+    Exclusion,
     GradedFact,
     Insurer,
+    Limit,
     OccupationCategory,
     Policy,
     PolicyVersion,
     Product,
+    Section,
 )
 from app.db.session import get_db
 from app.main import app
@@ -252,6 +256,82 @@ def test_missing_data_reflected_in_completeness_not_hidden(seeded_client):
     gamma = next(r for r in resp.json()["results"] if r["insurer"] == "Insurer Gamma")
     assert gamma["data_completeness"] < 1.0
     assert gamma["criteria"]["tpd_definition"]["score"] is None
+
+
+@pytest.fixture
+def general_seeded_client():
+    """General insurance (docs/08-UI-DESIGN.md) is a document diff, not a
+    graded score - mirrors real AMI home/contents data added 2026-07-31:
+    a benefit, a per-item sub-limit, and an exclusion, each with a source."""
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+    TestSession = sessionmaker(bind=engine)
+
+    with TestSession() as session:
+        insurer = Insurer(name="Insurer Delta", website_root="https://delta.test")
+        session.add(insurer)
+        session.flush()
+        product = Product(insurer_id=insurer.id, product_type="home_contents", name="Home & Contents")
+        session.add(product)
+        session.flush()
+        policy = Policy(product_id=product.id, name="Home & Contents")
+        session.add(policy)
+        session.flush()
+        pv = PolicyVersion(policy_id=policy.id, version_number=1, status="current")
+        session.add(pv)
+        session.flush()
+        doc = _seed_document(session, pv.id, "delta-home-contents-wording")
+        section = Section(policy_version_id=pv.id, document_id=doc.id, page_start=11, page_end=11)
+        session.add(section)
+        session.flush()
+
+        session.add(Benefit(
+            section_id=section.id, name="Walls, including garden and retaining walls",
+            description="Covered as part of your home.", is_automatic=True,
+            page=11, paragraph_ref="1.1", confidence=0.95,
+        ))
+        session.add(Limit(
+            section_id=section.id, limit_type="Watercraft powered by motor or sail (per item)",
+            amount=3000, currency="NZD", page=31, paragraph_ref="1.1", confidence=0.95,
+        ))
+        session.add(Exclusion(
+            section_id=section.id, description="Insects, rodents, slugs or snails and the like, or vermin",
+            page=41, paragraph_ref="1.1", confidence=0.9,
+        ))
+        session.commit()
+
+    def override_get_db():
+        with TestSession() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        yield client
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        engine.dispose()
+
+
+def test_compare_general_returns_real_facts_with_sources(general_seeded_client):
+    resp = general_seeded_client.post("/api/v1/compare/general", json={"product_type": "home_contents"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["data_source"] == "extracted_verified"
+    assert len(body["results"]) == 1
+
+    result = body["results"][0]
+    assert result["insurer"] == "Insurer Delta"
+    categories = {f["category"] for f in result["facts"]}
+    assert categories == {"benefit", "limit", "exclusion"}
+    for fact in result["facts"]:
+        assert fact["source"] is not None, f"{fact['name']} has no source"
+
+
+def test_compare_general_empty_product_type_returns_no_results(general_seeded_client):
+    resp = general_seeded_client.post("/api/v1/compare/general", json={"product_type": "travel"})
+    assert resp.json()["results"] == []
 
 
 @pytest.fixture
