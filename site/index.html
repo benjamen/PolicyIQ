@@ -411,16 +411,6 @@
   .error-card .ic { font-size: 18px; color: var(--brick); }
   .error-card .msg { flex: 1; font-size: 13px; }
   .error-card .msg b { display: block; font-size: 13.5px; margin-bottom: 2px; }
-  .demo-state-toggle {
-    display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 16px;
-    background: var(--paper-raised); border: 1px solid var(--border); border-radius: 999px;
-  }
-  .demo-state-toggle button {
-    border: none; background: none; padding: 6px 13px; border-radius: 999px;
-    font-size: 11.5px; font-weight: 600; color: var(--text-faint); cursor: pointer;
-  }
-  .demo-state-toggle button.on { background: var(--ink); color: var(--paper); }
-
   @media (prefers-reduced-motion: no-preference) {
     .view.active { animation: fade .15s ease-out; }
     @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; } }
@@ -450,11 +440,11 @@
     <form id="login-form" class="auth-form">
       <label class="field">
         <span>Work email</span>
-        <input type="email" placeholder="you@company.co.nz" value="j.chen@example.co.nz">
+        <input type="email" placeholder="you@company.co.nz">
       </label>
       <label class="field">
         <span>Password</span>
-        <input type="password" placeholder="••••••••" value="hunter2000000">
+        <input type="password" placeholder="••••••••">
       </label>
       <button type="submit" class="btn-primary auth-submit">Sign in</button>
     </form>
@@ -502,10 +492,10 @@
 
     <div class="rail-foot-row">
       <button class="rail-foot" id="rail-foot-btn" data-view="account" type="button">
-        <div class="avatar">JC</div>
+        <div class="avatar">?</div>
         <div class="rail-foot-text">
-          <div>J. Chen</div>
-          <div class="role">Broker</div>
+          <div>Account</div>
+          <div class="role">Not signed in — no real auth yet</div>
         </div>
       </button>
       <button class="rail-signout" id="btn-signout" type="button" title="Sign out" aria-label="Sign out">⏻</button>
@@ -524,110 +514,21 @@
 
     <!-- ================= DASHBOARD ================= -->
     <section class="view active" id="view-dashboard">
-      <div class="grid stat-row">
-        <div class="card stat">
-          <div class="stat-label">Documents indexed</div>
-          <div class="stat-value mono">4,812</div>
-          <div class="stat-delta good">▲ 63 this week</div>
-        </div>
-        <div class="card stat">
-          <div class="stat-label">Insurers tracked</div>
-          <div class="stat-value mono">6 <span style="font-size:13px;color:var(--text-faint);font-weight:500">/ 18 planned</span></div>
-          <div class="stat-delta good">Phase 1 set</div>
-        </div>
-        <div class="card stat">
-          <div class="stat-label">Citation verification rate</div>
-          <div class="stat-value mono">98.4%</div>
-          <div class="stat-delta good">▲ 0.6pt vs last week</div>
-        </div>
-        <div class="card stat">
-          <div class="stat-label">Insufficient-evidence rate</div>
-          <div class="stat-value mono">4.1%</div>
-          <div class="stat-delta warn">▲ 0.8pt — under review</div>
-        </div>
-      </div>
-
-      <div class="section-head"><h2>Crawler &amp; pipeline health</h2><span class="meta">Updated 6 min ago</span></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Insurer</th><th>Last crawl</th><th>New docs</th><th>Extraction confidence</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td>AA Insurance</td><td class="mono">Today, 04:12</td><td class="mono">3</td><td class="mono">0.93 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
-            <tr><td>AMI</td><td class="mono">Today, 04:15</td><td class="mono">1</td><td class="mono">0.91 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
-            <tr><td>State</td><td class="mono">Today, 04:18</td><td class="mono">0</td><td class="mono">0.90 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
-            <tr><td>Tower</td><td class="mono">Today, 04:21</td><td class="mono">2</td><td class="mono">0.79 avg</td><td><span class="pill warn"><i class="dot"></i>Review queue +4</span></td></tr>
-            <tr><td>NZI</td><td class="mono">Today, 04:25</td><td class="mono">0</td><td class="mono">0.88 avg</td><td><span class="pill ok"><i class="dot"></i>Healthy</span></td></tr>
-            <tr><td>Vero</td><td class="mono">Yesterday, 04:30</td><td class="mono">—</td><td class="mono">—</td><td><span class="pill bad"><i class="dot"></i>Crawl failed — selector drift</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="section-head"><h2>Recent changes</h2><span class="meta">Last 48 hours</span></div>
-      <div class="card">
-        <div class="feed-item">
-          <div class="feed-ic" style="background:var(--amber-soft);color:var(--amber)">▲</div>
-          <div class="feed-body">
-            <div class="feed-title">Tower Contents — Temporary accommodation benefit increased $2,500 → $3,500</div>
-            <div class="feed-sub">Policy Wording v7, Section 5.1 · p.9</div>
-          </div>
-          <div class="feed-time">2h ago</div>
-        </div>
-        <div class="feed-item">
-          <div class="feed-ic" style="background:var(--brick-soft);color:var(--brick)">✕</div>
-          <div class="feed-body">
-            <div class="feed-title">AMI House — New exclusion added for gradual retaining wall failure</div>
-            <div class="feed-sub">PDS v12, Section 4.2 · p.12</div>
-          </div>
-          <div class="feed-time">6h ago</div>
-        </div>
-        <div class="feed-item">
-          <div class="feed-ic" style="background:var(--teal-soft);color:var(--teal)">＋</div>
-          <div class="feed-body">
-            <div class="feed-title">AA Insurance — New optional cover: portable electronic equipment</div>
-            <div class="feed-sub">Contents Wording v4, Section 6.3 · p.15</div>
-          </div>
-          <div class="feed-time">Yesterday</div>
-        </div>
+      <div class="card" style="padding:28px 24px;text-align:center;color:var(--text-faint)">
+        <p style="margin:0 0 6px;font-weight:650;color:var(--text)">Dashboard isn't built yet</p>
+        <p style="margin:0;max-width:52ch;margin-inline:auto">Crawler health, document counts, and citation-verification stats need an admin/metrics API that doesn't exist yet. See <button class="nav-item" style="display:inline;width:auto;padding:0;color:var(--teal);font-weight:600" data-view="compare">Compare</button> for the real, live, citation-verified comparison data.</p>
       </div>
     </section>
 
     <!-- ================= SEARCH ================= -->
     <section class="view" id="view-search">
       <div class="qbar">
-        <input type="text" value="Which insurer covers damage to retaining walls?" readonly>
-        <button>Ask</button>
+        <input type="text" placeholder="Ask anything — e.g. which insurer covers retaining walls?" disabled>
+        <button disabled>Ask</button>
       </div>
-
-      <div class="card answer-card">
-        <div class="answer-meta">
-          <span class="pill neutral">Informational</span>
-          <span style="font-size:12px;color:var(--text-faint)">Confidence</span>
-          <div class="confidence-bar"><i style="width:87%"></i></div>
-          <span class="mono" style="font-size:12px;color:var(--text-muted)">0.87</span>
-        </div>
-        <p class="answer-text serif">
-          Two of the six tracked insurers explicitly cover retaining wall damage under their house policies.
-          <span class="hl">AMI's House Policy</span> covers sudden retaining wall failure up to
-          <span class="hl">$20,000</span>, but as of this week excludes gradual failure or poor drainage.
-          <span class="hl">State's Home Policy</span> covers retaining walls up to
-          <span class="hl">$15,000</span> with no gradual-failure exclusion on file. Tower, NZI, AA Insurance,
-          and Vero's current wordings do not mention retaining walls as a named benefit.
-        </p>
-        <div class="citations">
-          <div class="citations-label">Sources</div>
-          <div class="citation-chip">
-            <span class="src">AMI — House Policy Wording v12</span>
-            <span class="loc mono">p.12 · §4.2</span>
-            <span class="excerpt">"...sudden and unforeseen failure of a retaining wall, up to $20,000..."</span>
-            <span class="verify pill ok">✓ Verified</span>
-          </div>
-          <div class="citation-chip">
-            <span class="src">State — Home Policy Wording v9</span>
-            <span class="loc mono">p.8 · §3.6</span>
-            <span class="excerpt">"...retaining walls forming part of the home, up to $15,000..."</span>
-            <span class="verify pill ok">✓ Verified</span>
-          </div>
-        </div>
+      <div class="card" style="padding:28px 24px;text-align:center;color:var(--text-faint)">
+        <p style="margin:0 0 6px;font-weight:650;color:var(--text)">Free-text search isn't built yet</p>
+        <p style="margin:0;max-width:52ch;margin-inline:auto">Retrieval, reranking, and grounded-answer generation over the document corpus need a query engine that doesn't exist yet (see docs/04/05-*-STRATEGY.md). The real, citation-verified facts already extracted are visible today in <button class="nav-item" style="display:inline;width:auto;padding:0;color:var(--teal);font-weight:600" data-view="compare">Compare</button>.</p>
       </div>
     </section>
 
@@ -676,15 +577,7 @@
 
         <div class="section-head">
           <h2>Life Cover — graded for age 38, non-smoker, Professional</h2>
-          <span class="pill neutral" id="data-source-pill">Synthetic fixture data — pending live crawl</span>
-        </div>
-
-        <!-- Demo control: not part of the shipped product — lets this static mockup show the
-             loading/error/loaded states described in 11-DATA-CONNECTION.md without a live backend. -->
-        <div class="demo-state-toggle" role="group" aria-label="Demo: comparison load state">
-          <button class="on" data-demo-state="loaded" type="button">Loaded</button>
-          <button data-demo-state="loading" type="button">Loading</button>
-          <button data-demo-state="error" type="button">Error</button>
+          <span class="pill neutral" id="data-source-pill">Loading…</span>
         </div>
 
         <!-- Loading state -->
@@ -725,71 +618,8 @@
 
         <!-- Loaded state (default) -->
         <div id="compare-life-loaded">
-          <div class="grade-board" id="grade-board">
-            <div class="card grade-card">
-              <div class="grade-card-head">
-                <div>
-                  <div class="grade-insurer">Insurer Alpha</div>
-                  <div class="grade-product">Life Cover · v3</div>
-                </div>
-                <div class="grade-overall">
-                  <div class="grade-ring good" style="--pct:87"><span>87</span></div>
-                  <span class="pill ok">Eligible</span>
-                </div>
-              </div>
-              <div class="criteria-list">
-                <div class="criterion"><span>TPD definition</span><b>Own occupation</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Trauma conditions</span><b>42 covered</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Automatic benefits</span><b>7 benefits</b><i class="crit-bar" style="--w:70%"></i></div>
-              </div>
-            </div>
-
-            <div class="card grade-card">
-              <div class="grade-card-head">
-                <div>
-                  <div class="grade-insurer">Insurer Beta</div>
-                  <div class="grade-product">LifeProtect · v5</div>
-                </div>
-                <div class="grade-overall">
-                  <div class="grade-ring warn" style="--pct:64"><span>64</span></div>
-                  <span class="pill ok">Eligible</span>
-                </div>
-              </div>
-              <div class="criteria-list">
-                <div class="criterion"><span>TPD definition</span><b>Modified own occupation</b><i class="crit-bar" style="--w:70%"></i></div>
-                <div class="criterion"><span>Trauma conditions</span><b>33 covered</b><i class="crit-bar" style="--w:51%"></i></div>
-                <div class="criterion"><span>Occupation restriction</span><b>None for Professional</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Premium structure</span><b>Stepped, reviewable</b><i class="crit-bar" style="--w:40%"></i></div>
-                <div class="criterion"><span>Waiver of premium</span><b>Included</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Automatic benefits</span><b>4 benefits</b><i class="crit-bar" style="--w:40%"></i></div>
-              </div>
-            </div>
-
-            <div class="card grade-card">
-              <div class="grade-card-head">
-                <div>
-                  <div class="grade-insurer">Insurer Gamma</div>
-                  <div class="grade-product">Life Shield · v2</div>
-                </div>
-                <div class="grade-overall">
-                  <div class="grade-ring warn" style="--pct:65"><span>65</span></div>
-                  <span class="pill warn">65% data completeness</span>
-                </div>
-              </div>
-              <div class="criteria-list">
-                <div class="criterion muted"><span>TPD definition</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
-                <div class="criterion muted"><span>Trauma conditions</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
-                <div class="criterion"><span>Occupation restriction</span><b>None on file</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion"><span>Premium structure</span><b>Level, guaranteed</b><i class="crit-bar" style="--w:100%"></i></div>
-                <div class="criterion muted"><span>Waiver of premium</span><b>Not yet extracted</b><i class="crit-bar" style="--w:0%"></i></div>
-                <div class="criterion"><span>Automatic benefits</span><b>9 benefits</b><i class="crit-bar" style="--w:90%"></i></div>
-              </div>
-            </div>
-          </div>
-          <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure. <span id="live-mode-note" style="display:none">Loaded live from <code class="mono">/api/v1/compare/life</code> — see <code class="mono">?live=1</code> in this page's URL.</span></p>
+          <div class="grade-board" id="grade-board"></div>
+          <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure. Loaded live from <code class="mono">/api/v1/compare/life</code>.</p>
         </div>
       </div>
 
@@ -797,14 +627,7 @@
       <div class="compare-panel" id="compare-general">
         <div class="section-head" style="margin-top:0">
           <h2 id="general-heading">Home &amp; Contents insurance</h2>
-          <span class="pill neutral" id="general-data-source-pill">Synthetic fixture data — pending live crawl</span>
-        </div>
-        <!-- Demo control: not part of the shipped product — lets this static mockup show the
-             loading/error/loaded states without a live backend. -->
-        <div class="demo-state-toggle" role="group" aria-label="Demo: general comparison load state">
-          <button class="on" data-demo-general-state="loaded" type="button">Loaded</button>
-          <button data-demo-general-state="loading" type="button">Loading</button>
-          <button data-demo-general-state="error" type="button">Error</button>
+          <span class="pill neutral" id="general-data-source-pill">Loading…</span>
         </div>
         <div class="grade-board" id="compare-general-loading" style="display:none">
           <div class="card skeleton-card">
@@ -823,118 +646,26 @@
         </div>
         <div id="compare-general-loaded">
           <div class="table-wrap">
-            <table id="general-table">
-              <thead>
-                <tr><th style="width:22%">Attribute</th><th>AMI Contents v6</th><th>Tower Contents v7</th></tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Temporary accommodation</td>
-                  <td>$2,500 max, 14 days<span class="loc-ref">p.9 · §5.1</span></td>
-                  <td class="compare-cell-diff">$3,500 max, 21 days<span class="loc-ref">p.9 · §5.1 — increased this week</span></td>
-                </tr>
-                <tr>
-                  <td>Electric vehicle charging cable</td>
-                  <td class="compare-cell-missing">Not covered</td>
-                  <td>Covered, up to $1,000<span class="loc-ref">p.14 · §7.4</span></td>
-                </tr>
-                <tr>
-                  <td>Portable electronics excess</td>
-                  <td>$400<span class="loc-ref">p.6 · §2.3</span></td>
-                  <td>$250<span class="loc-ref">p.5 · §2.1</span></td>
-                </tr>
-                <tr>
-                  <td>Gradual damage exclusion</td>
-                  <td>Excluded — all causes<span class="loc-ref">p.18 · §9.2</span></td>
-                  <td>Excluded — except plumbing leaks<span class="loc-ref">p.16 · §8.9</span></td>
-                </tr>
-              </tbody>
-            </table>
+            <table id="general-table"></table>
           </div>
-          <p class="grade-footnote">Rows group real extracted facts by topic (retaining walls, temporary accommodation, specified-item sub-limits, exclusions) — insurers with no matching fact for a topic show "not found", never a guess. <span id="general-live-mode-note" style="display:none">Loaded live from <code class="mono">/api/v1/compare/general</code> — see <code class="mono">?live=1</code> in this page's URL.</span></p>
+          <p class="grade-footnote">Rows group real extracted facts by topic (retaining walls, temporary accommodation, specified-item sub-limits, exclusions) — insurers with no matching fact for a topic show "not found", never a guess. Loaded live from <code class="mono">/api/v1/compare/general</code>.</p>
         </div>
       </div>
     </section>
 
     <!-- ================= ADMIN ================= -->
     <section class="view" id="view-admin">
-      <div class="grid stat-row">
-        <div class="card stat"><div class="stat-label">Queued extraction jobs</div><div class="stat-value mono">12</div></div>
-        <div class="card stat"><div class="stat-label">Failed downloads (7d)</div><div class="stat-value mono">3</div></div>
-        <div class="card stat"><div class="stat-label">Embedding coverage</div><div class="stat-value mono">99.2%</div></div>
-        <div class="card stat"><div class="stat-label">Search queries (24h)</div><div class="stat-value mono">1,204</div></div>
-      </div>
-      <div class="section-head" style="margin-top:8px"><h2>Extraction review queue — low confidence</h2><span class="meta">Threshold &lt; 0.75</span></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Document</th><th>Section</th><th>Field</th><th>Confidence</th><th>Action</th></tr></thead>
-          <tbody>
-            <tr><td>Tower Contents v7</td><td>§6.2, p.11</td><td>Waiting period — accidental damage</td><td class="mono">0.61</td><td><button class="btn-ghost">Review</button></td></tr>
-            <tr><td>Tower Travel v4</td><td>§3.1, p.4</td><td>Excess — drone equipment</td><td class="mono">0.58</td><td><button class="btn-ghost">Review</button></td></tr>
-            <tr><td>NZI Home v10</td><td>§9.4, p.19</td><td>Exclusion — subsidence</td><td class="mono">0.71</td><td><button class="btn-ghost">Review</button></td></tr>
-          </tbody>
-        </table>
+      <div class="card" style="padding:28px 24px;text-align:center;color:var(--text-faint)">
+        <p style="margin:0 0 6px;font-weight:650;color:var(--text)">Admin isn't built yet</p>
+        <p style="margin:0;max-width:52ch;margin-inline:auto">An extraction review queue and pipeline-health metrics need an admin API that doesn't exist yet.</p>
       </div>
     </section>
 
     <!-- ================= ACCOUNT ================= -->
     <section class="view" id="view-account">
-      <div class="section-head" style="margin-top:0"><h2>Profile</h2></div>
-      <div class="card" style="padding:20px 22px;display:flex;flex-direction:column;gap:16px;max-width:560px">
-        <label class="field">
-          <span>Name</span>
-          <input type="text" value="J. Chen">
-        </label>
-        <label class="field">
-          <span>Email</span>
-          <input type="email" value="j.chen@example.co.nz" disabled>
-        </label>
-        <div style="font-size:11px;color:var(--text-faint);margin-top:-10px">Managed by your identity provider — sign in method below</div>
-        <label class="field">
-          <span>Organization / firm</span>
-          <input type="text" value="Chen Insurance Advisers Ltd">
-        </label>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span class="pill ok">Broker</span>
-          <span class="pill neutral">Signed in with Microsoft</span>
-        </div>
-        <div><button class="btn-primary" style="align-self:flex-start;height:36px">Save changes</button></div>
-      </div>
-
-      <div class="section-head"><h2>Security</h2></div>
-      <div class="card" style="padding:18px 22px;max-width:560px;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:600;font-size:13px">Sign-in method</div>
-          <div style="font-size:12px;color:var(--text-faint);margin-top:2px">Microsoft Entra SSO — no PolicyIQ password set</div>
-        </div>
-        <span class="pill ok">✓ MFA enforced by IdP</span>
-      </div>
-
-      <div class="section-head"><h2>API keys</h2><span class="meta">For broker/B2B programmatic access</span></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Label</th><th>Key</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
-          <tbody id="api-key-rows">
-            <tr>
-              <td>Quoting tool integration</td>
-              <td class="mono">pk_live_••••a91f</td>
-              <td class="mono">2026-06-02</td>
-              <td class="mono">3h ago</td>
-              <td><span class="pill ok"><i class="dot"></i>Active</span></td>
-              <td><button class="btn-ghost btn-revoke-key">Revoke</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <button class="btn-primary" id="btn-new-api-key" style="margin-top:14px;height:36px">Generate new key</button>
-
-      <div class="card" id="api-key-reveal" style="display:none;margin-top:14px;padding:16px 18px;border-color:var(--teal)">
-        <div style="font-weight:600;font-size:13px;margin-bottom:6px">New key created</div>
-        <div style="font-size:12px;color:var(--text-faint);margin-bottom:10px">Copy this now — it won't be shown again.</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <code class="mono" id="new-api-key-value" style="flex:1;padding:8px 10px;background:var(--paper);border-radius:var(--radius-sm);font-size:12.5px;overflow-x:auto">pk_live_7f2a9c14e8b3d91a</code>
-          <button class="btn-ghost" id="btn-copy-key" type="button">Copy</button>
-        </div>
+      <div class="card" style="padding:28px 24px;text-align:center;color:var(--text-faint)">
+        <p style="margin:0 0 6px;font-weight:650;color:var(--text)">Accounts aren't built yet</p>
+        <p style="margin:0;max-width:52ch;margin-inline:auto">Profile management, SSO, and API keys need a real auth backend that doesn't exist yet (see docs/10-AUTH-AND-ACCOUNTS.md for the planned design). The Sign in screen is a UI mockup only — it doesn't check anything real.</p>
       </div>
     </section>
   </main>
@@ -1009,8 +740,7 @@
 
   document.getElementById('btn-signout').addEventListener('click', showLogin);
 
-  /* ---- Compare > Life Insurance: loading / error / loaded demo states ---- */
-  const demoStateBtns = document.querySelectorAll('[data-demo-state]');
+  /* ---- Compare > Life Insurance: loading / error / loaded states ---- */
   const blocks = {
     loading: document.getElementById('compare-life-loading'),
     error: document.getElementById('compare-life-error'),
@@ -1020,27 +750,23 @@
     Object.entries(blocks).forEach(([key, el]) => {
       el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
     });
-    demoStateBtns.forEach(b => b.classList.toggle('on', b.dataset.demoState === state));
   }
-  demoStateBtns.forEach(b => b.addEventListener('click', () => setCompareState(b.dataset.demoState)));
-  document.getElementById('btn-retry-compare').addEventListener('click', () => setCompareState('loading'));
+  document.getElementById('btn-retry-compare').addEventListener('click', () => fetchLifeComparison());
 
   const dataSourcePill = document.getElementById('data-source-pill');
   function setDataSource(source) {
     dataSourcePill.textContent = source === 'extracted_verified'
       ? 'Live, citation-verified data'
-      : 'Synthetic fixture data — pending live crawl';
+      : 'Unknown data source';
     dataSourcePill.classList.toggle('ok', source === 'extracted_verified');
     dataSourcePill.classList.toggle('neutral', source !== 'extracted_verified');
   }
 
   /* ---- Real data connection (see 11-DATA-CONNECTION.md) ----
-     This is the documented fetch pattern against the one endpoint that actually exists,
-     POST /api/v1/compare/life. It only runs with ?live=1 in the URL. Defaults to the real
-     deployed backend (api.policyiq.nz, HTTPS via Let's Encrypt — see docs/06-DEPLOYMENT-PLAN.md);
-     override with ?api_base= to point at a locally running backend instead during development. */
+     Fetch pattern against the real deployed backend (api.policyiq.nz, HTTPS via Let's
+     Encrypt — see docs/06-DEPLOYMENT-PLAN.md); override with ?api_base= to point at a
+     locally running backend instead during development. */
   const params = new URLSearchParams(location.search);
-  const isLive = params.get('live') === '1';
   const API_BASE = params.get('api_base') || 'https://api.policyiq.nz';
 
   const CRITERIA_ORDER = [
@@ -1067,9 +793,6 @@
     return String(name || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
-  // Real API response -> the same grade-card markup the static fixture used, built from
-  // `data.results` instead of hardcoded "Insurer Alpha/Beta/Gamma" - the fixture cards were
-  // always a stand-in for this (see the "later implementation-slice task" note this replaces).
   function renderGradeBoard(results) {
     const board = document.getElementById('grade-board');
     if (!results || results.length === 0) {
@@ -1129,7 +852,6 @@
       const data = await res.json();
       setDataSource(data.data_source);
       renderGradeBoard(data.results);
-      document.getElementById('live-mode-note').style.display = 'inline';
       setCompareState('loaded');
     } catch (err) {
       setCompareState('error');
@@ -1137,17 +859,10 @@
   }
 
   document.getElementById('btn-grade-compare').addEventListener('click', () => {
-    if (isLive) {
-      fetchLifeComparison();
-      return;
-    }
-    // Not live: cycle loading -> loaded so the state transition is visible without a backend.
-    setCompareState('loading');
-    setTimeout(() => setCompareState('loaded'), 700);
+    fetchLifeComparison();
   });
 
-  /* ---- Compare > General Insurance: loading / error / loaded demo states ---- */
-  const demoGeneralStateBtns = document.querySelectorAll('[data-demo-general-state]');
+  /* ---- Compare > General Insurance: loading / error / loaded states ---- */
   const generalBlocks = {
     loading: document.getElementById('compare-general-loading'),
     error: document.getElementById('compare-general-error'),
@@ -1157,16 +872,14 @@
     Object.entries(generalBlocks).forEach(([key, el]) => {
       el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
     });
-    demoGeneralStateBtns.forEach(b => b.classList.toggle('on', b.dataset.demoGeneralState === state));
   }
-  demoGeneralStateBtns.forEach(b => b.addEventListener('click', () => setGeneralCompareState(b.dataset.demoGeneralState)));
-  document.getElementById('btn-retry-general').addEventListener('click', () => setGeneralCompareState('loading'));
+  document.getElementById('btn-retry-general').addEventListener('click', () => fetchGeneralComparison());
 
   const generalDataSourcePill = document.getElementById('general-data-source-pill');
   function setGeneralDataSource(source) {
     generalDataSourcePill.textContent = source === 'extracted_verified'
       ? 'Live, citation-verified data'
-      : 'Synthetic fixture data — pending live crawl';
+      : 'Unknown data source';
     generalDataSourcePill.classList.toggle('ok', source === 'extracted_verified');
     generalDataSourcePill.classList.toggle('neutral', source !== 'extracted_verified');
   }
@@ -1255,7 +968,6 @@
       const data = await res.json();
       setGeneralDataSource(data.data_source);
       renderGeneralTable(data.results);
-      document.getElementById('general-live-mode-note').style.display = 'inline';
       setGeneralCompareState('loaded');
     } catch (err) {
       setGeneralCompareState('error');
@@ -1265,39 +977,19 @@
   let generalFetchedOnce = false;
   segTabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      if (isLive && tab.dataset.compareMode === 'general' && !generalFetchedOnce) {
+      if (tab.dataset.compareMode === 'general' && !generalFetchedOnce) {
         generalFetchedOnce = true;
         fetchGeneralComparison();
       }
     });
   });
 
-  /* ---- Account: API key demo interactions (static, no backend) ---- */
-  document.getElementById('btn-new-api-key').addEventListener('click', () => {
-    document.getElementById('api-key-reveal').style.display = 'block';
-  });
-  document.getElementById('btn-copy-key').addEventListener('click', (e) => {
-    const key = document.getElementById('new-api-key-value').textContent;
-    navigator.clipboard?.writeText(key).catch(() => {});
-    e.target.textContent = 'Copied';
-    setTimeout(() => { e.target.textContent = 'Copy'; }, 1200);
-  });
-  document.querySelectorAll('.btn-revoke-key').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const row = btn.closest('tr');
-      row.querySelector('.pill').outerHTML = '<span class="pill bad"><i class="dot"></i>Revoked</span>';
-      btn.disabled = true;
-    });
-  });
-
   /* ---- Boot ---- */
-  if (isLive) {
-    // Skip the login screen and land straight on Compare in live-demo mode, so the API call's
-    // result is immediately visible instead of requiring a manual click-through first.
-    showApp();
-    navigate('compare');
-    fetchLifeComparison();
-  }
+  // No real auth backend exists yet (see docs/10-AUTH-AND-ACCOUNTS.md), so the login
+  // screen can't check anything real — land straight on Compare with real, live data.
+  showApp();
+  navigate('compare');
+  fetchLifeComparison();
 </script>
 </body>
 </html>
