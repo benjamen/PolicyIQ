@@ -537,6 +537,7 @@
       <div class="seg-tabs" role="tablist" aria-label="Comparison mode">
         <button class="seg-tab on" data-compare-mode="life">Life Insurance</button>
         <button class="seg-tab" data-compare-mode="general">General Insurance</button>
+        <button class="seg-tab" data-compare-mode="health">Health Insurance</button>
       </div>
 
       <!-- ---- Life insurance: graded, filter-driven comparison ---- -->
@@ -651,6 +652,35 @@
           <p class="grade-footnote">Rows group real extracted facts by topic (retaining walls, temporary accommodation, specified-item sub-limits, exclusions) — insurers with no matching fact for a topic show "not found", never a guess. Loaded live from <code class="mono">/api/v1/compare/general</code>.</p>
         </div>
       </div>
+
+      <!-- ---- Health insurance: document-diff comparison ---- -->
+      <div class="compare-panel" id="compare-health">
+        <div class="section-head" style="margin-top:0">
+          <h2 id="health-heading">Health insurance</h2>
+          <span class="pill neutral" id="health-data-source-pill">Loading…</span>
+        </div>
+        <div class="grade-board" id="compare-health-loading" style="display:none">
+          <div class="card skeleton-card">
+            <div class="skeleton skeleton-line" style="width:60%;height:16px"></div>
+            <div class="skeleton skeleton-line" style="width:90%"></div>
+            <div class="skeleton skeleton-line" style="width:75%"></div>
+          </div>
+        </div>
+        <div class="card error-card" id="compare-health-error" style="display:none">
+          <span class="ic">⚠</span>
+          <div class="msg">
+            <b>Couldn't load comparison</b>
+            The comparison service didn't respond. Retry when ready.
+          </div>
+          <button class="btn-ghost" id="btn-retry-health">Retry</button>
+        </div>
+        <div id="compare-health-loaded">
+          <div class="table-wrap">
+            <table id="health-table"></table>
+          </div>
+          <p class="grade-footnote">Rows group real extracted facts by topic (benefit limits, exclusions) — insurers with no matching fact for a topic show "not found", never a guess. Loaded live from <code class="mono">/api/v1/compare/general</code>.</p>
+        </div>
+      </div>
     </section>
 
     <!-- ================= ADMIN ================= -->
@@ -702,6 +732,7 @@
       segTabs.forEach(t => t.classList.toggle('on', t === tab));
       document.getElementById('compare-life').classList.toggle('active', mode === 'life');
       document.getElementById('compare-general').classList.toggle('active', mode === 'general');
+      document.getElementById('compare-health').classList.toggle('active', mode === 'health');
     });
   });
 
@@ -974,12 +1005,127 @@
     }
   }
 
+  /* ---- Compare > Health Insurance: loading / error / loaded states ---- */
+  const healthBlocks = {
+    loading: document.getElementById('compare-health-loading'),
+    error: document.getElementById('compare-health-error'),
+    loaded: document.getElementById('compare-health-loaded'),
+  };
+  function setHealthCompareState(state) {
+    Object.entries(healthBlocks).forEach(([key, el]) => {
+      el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
+    });
+  }
+  document.getElementById('btn-retry-health').addEventListener('click', () => fetchHealthComparison());
+
+  const healthDataSourcePill = document.getElementById('health-data-source-pill');
+  function setHealthDataSource(source) {
+    healthDataSourcePill.textContent = source === 'extracted_verified'
+      ? 'Live, citation-verified data'
+      : 'Unknown data source';
+    healthDataSourcePill.classList.toggle('ok', source === 'extracted_verified');
+    healthDataSourcePill.classList.toggle('neutral', source !== 'extracted_verified');
+  }
+
+  // Same topic-keyword grouping approach as GENERAL_TOPICS above, tuned to the
+  // real facts extracted so far for Southern Cross (UltraCare) and nib (Premium
+  // Hospital) - e.g. both exclude the same rare congenital conditions (cystic
+  // fibrosis, Marfan's, kyphosis), and SC's "Gastric banding or bypass
+  // allowance" benefit lines up meaningfully against nib's "weight loss or
+  // bariatric" exclusion (a benefit vs. an exclusion is itself the real,
+  // useful comparison signal, not a data mismatch).
+  const HEALTH_TOPICS = [
+    { label: 'Home nursing / home care', match: /home (nursing|care)/i },
+    { label: 'Congenital / chronic conditions exclusion', match: /congenital|chronic condition|cystic fibrosis|marfan|kyphosis|scoliosis/i },
+    { label: 'Gastric banding / bariatric / weight loss', match: /gastric|bariatric|weight loss/i },
+    { label: 'Pre-existing conditions exclusion', match: /pre-existing/i },
+    { label: 'Cosmetic exclusion', match: /cosmetic/i },
+    { label: 'Cancer treatment', match: /cancer|chemotherapy/i },
+    { label: 'Physiotherapy', match: /physiotherapy/i },
+    { label: 'Surgical benefit', match: /surgical (procedures|benefit)/i },
+  ];
+
+  function escapeHtmlHealth(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+  }
+
+  function renderHealthTable(results) {
+    const table = document.getElementById('health-table');
+    if (!results || results.length === 0) {
+      table.innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-faint)">No health insurance data available yet.</td></tr></tbody>';
+      return;
+    }
+    const insurers = results.map(r => r.insurer);
+    const usedFactIndex = results.map(() => new Set());
+
+    const rows = [];
+    for (const topic of HEALTH_TOPICS) {
+      const cells = results.map((r, i) => {
+        const idx = r.facts.findIndex((f, fi) => !usedFactIndex[i].has(fi) && topic.match.test(f.name));
+        if (idx === -1) return null;
+        usedFactIndex[i].add(idx);
+        return r.facts[idx];
+      });
+      if (cells.every(c => c === null)) continue;
+      rows.push({ label: topic.label, cells });
+    }
+    const leftoverByName = new Map();
+    results.forEach((r, i) => {
+      r.facts.forEach((f, fi) => {
+        if (usedFactIndex[i].has(fi)) return;
+        if (!leftoverByName.has(f.name)) leftoverByName.set(f.name, results.map(() => null));
+        leftoverByName.get(f.name)[i] = f;
+      });
+    });
+    leftoverByName.forEach((cells, label) => rows.push({ label, cells }));
+
+    const theadHtml = `<tr><th style="width:22%">Attribute</th>${insurers.map(name => `<th>${escapeHtmlHealth(name)}</th>`).join('')}</tr>`;
+    const tbodyHtml = rows.map(row => {
+      const cellsHtml = row.cells.map(f => {
+        if (!f) return '<td class="compare-cell-missing">Not found</td>';
+        const value = f.category === 'exclusion' ? `Excluded — ${f.name}` : (f.detail || f.name);
+        const locRef = f.source ? `<span class="loc-ref">p.${f.source.page} · ${escapeHtmlHealth(f.source.document)}</span>` : '';
+        return `<td>${escapeHtmlHealth(value)}${locRef}</td>`;
+      }).join('');
+      return `<tr><td>${escapeHtmlHealth(row.label)}</td>${cellsHtml}</tr>`;
+    }).join('');
+
+    table.innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
+  }
+
+  async function fetchHealthComparison() {
+    setHealthCompareState('loading');
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/compare/general`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_type: 'health' }),
+      });
+      if (res.status === 401) { showLogin(); return; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setHealthDataSource(data.data_source);
+      renderHealthTable(data.results);
+      setHealthCompareState('loaded');
+    } catch (err) {
+      setHealthCompareState('error');
+    }
+  }
+
   let generalFetchedOnce = false;
+  let healthFetchedOnce = false;
   segTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       if (tab.dataset.compareMode === 'general' && !generalFetchedOnce) {
         generalFetchedOnce = true;
         fetchGeneralComparison();
+      }
+      if (tab.dataset.compareMode === 'health' && !healthFetchedOnce) {
+        healthFetchedOnce = true;
+        fetchHealthComparison();
       }
     });
   });

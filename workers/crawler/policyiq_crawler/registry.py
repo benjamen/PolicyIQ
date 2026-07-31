@@ -373,6 +373,67 @@ GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
 )
 
 
+# Health insurance vertical - started 2026-07-31, same "prove it on one
+# insurer" pacing as GENERAL_INSURER_SEED. Crawlability researched live for
+# the 5 obvious NZ health insurers: Southern Cross, nib, and UniMed are
+# directly crawlable (real policy documents linked from their own sites,
+# permissive robots.txt); AIA Health needs the same docs.kiwicover.co.nz
+# broker-mirror workaround as AIA Life (www.aia.co.nz itself still WAF-
+# blocks this project's honest crawler, confirmed again 2026-07-31, same
+# signature as every prior AIA check this session - not revisited).
+# Accuro was researched and found NOT to be an independently addable
+# insurer any more: www.accuro.co.nz now 301-redirects its entire site
+# (including old /assets/Uploads/... document paths) to a "UniMed | Accuro"
+# portal shell - Accuro has been absorbed into UniMed's brand, its legacy
+# standalone policy documents are gone from the live web. Not adding a
+# separate "Accuro" entry; UniMed is the real current insurer here.
+HEALTH_INSURER_SEED: tuple[InsurerSeed, ...] = (
+    InsurerSeed(
+        "Southern Cross Health Society",
+        "https://www.southerncross.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-07-31: linked directly from the public
+            # southerncross.co.nz/society plan-documents page, no login
+            # wall. Southern Cross sells several plan tiers (HealthEssentials,
+            # Wellbeing One/Two, UltraCare) - UltraCare seeded as the single
+            # representative product (their most comprehensive, best-known
+            # plan) to prove the pattern, matching how AMI/Tower/etc. seeded
+            # one representative tier rather than the full product range.
+            known_document_urls=(
+                "https://www.southerncross.co.nz/-/media/Southern-Cross-Health-Society/Health-insurance/Member-collateral/Plan-documents/Current-plan-documents/PD_UltraCare_plan.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "nib",
+        "https://www.nib.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-07-31 via nib.co.nz/compare-plans (the
+            # real public plan-comparison page): nib's current direct-to-
+            # consumer lineup is Standard/Premium Hospital and Standard/
+            # Premium Everyday - "Premium Hospital" seeded as the single
+            # representative product (most comprehensive currently-sold
+            # plan, dated 24 Nov 2025). Note: "Ultimate Health"/"Ultimate
+            # Health Max" (found first via web search, and still real,
+            # current nib documents) turned out to be adviser-channel-only
+            # products not sold directly on nib.co.nz - not seeded, to
+            # avoid comparing a retail plan against a broker-only one.
+            # Documents are hosted on assets.ctfassets.net (nib's own CMS
+            # asset CDN, directly linked from nib.co.nz/compare-plans) -
+            # a different domain than nib.co.nz itself, so
+            # trusted_document_domains is needed for _is_in_scope() to
+            # treat it as first-party (same pattern as AA Life's sibling
+            # domain), otherwise a real automated crawl would mark this
+            # known_document_url out-of-scope and Phase A would skip it.
+            trusted_document_domains=("assets.ctfassets.net",),
+            known_document_urls=(
+                "https://assets.ctfassets.net/ja9v5o5o08yv/4B7F1fUvBXfP3RwwbJ8RG4/16b351dee312ac8c603ff884df59f8bb/premium-hospital-policy-from-24-Nov-2025.pdf",
+            ),
+        ),
+    ),
+)
+
+
 def discover_insurers() -> tuple[InsurerSeed, ...]:
     """Returns the current insurer seed set.
 
@@ -385,4 +446,4 @@ def discover_insurers() -> tuple[InsurerSeed, ...]:
     checkpoint rather than a fully automatic add.
     """
 
-    return LIFE_INSURER_SEED + GENERAL_INSURER_SEED
+    return LIFE_INSURER_SEED + GENERAL_INSURER_SEED + HEALTH_INSURER_SEED
