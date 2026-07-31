@@ -789,7 +789,7 @@
               </div>
             </div>
           </div>
-          <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure (see Insurer Gamma). <span id="live-mode-note" style="display:none">Loaded live from <code class="mono">/api/v1/compare/life</code> — see <code class="mono">?live=1</code> in this page's URL.</span></p>
+          <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure. <span id="live-mode-note" style="display:none">Loaded live from <code class="mono">/api/v1/compare/life</code> — see <code class="mono">?live=1</code> in this page's URL.</span></p>
         </div>
       </div>
 
@@ -1021,6 +1021,73 @@
   const isLive = params.get('live') === '1';
   const API_BASE = params.get('api_base') || 'https://api.policyiq.nz';
 
+  const CRITERIA_ORDER = [
+    'tpd_definition', 'trauma_conditions', 'occupation_restrictions',
+    'premium_structure', 'waiver_of_premium', 'automatic_benefits',
+  ];
+  const CRITERIA_LABELS = {
+    tpd_definition: 'TPD definition',
+    trauma_conditions: 'Trauma conditions',
+    occupation_restrictions: 'Occupation restriction',
+    premium_structure: 'Premium structure',
+    waiver_of_premium: 'Waiver of premium',
+    automatic_benefits: 'Automatic benefits',
+  };
+
+  // Never insert API text into innerHTML unescaped, even from a trusted first-party
+  // endpoint - a malformed or compromised extraction could otherwise inject markup.
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+  }
+  function formatProductName(name) {
+    return String(name || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+
+  // Real API response -> the same grade-card markup the static fixture used, built from
+  // `data.results` instead of hardcoded "Insurer Alpha/Beta/Gamma" - the fixture cards were
+  // always a stand-in for this (see the "later implementation-slice task" note this replaces).
+  function renderGradeBoard(results) {
+    const board = document.getElementById('grade-board');
+    if (!results || results.length === 0) {
+      board.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-faint)">'
+        + 'No products matched these filters yet.</div>';
+      return;
+    }
+    board.innerHTML = results.map(r => {
+      const score = Math.round(r.overall_score || 0);
+      const ring = score >= 75 ? 'good' : score >= 45 ? 'warn' : 'bad';
+      const completeness = Math.round((r.data_completeness || 0) * 100);
+      const eligPill = !r.eligible
+        ? `<span class="pill bad"${r.ineligibility_reason ? ` title="${escapeHtml(r.ineligibility_reason)}"` : ''}>Ineligible</span>`
+        : r.ineligibility_reason
+          ? `<span class="pill warn" title="${escapeHtml(r.ineligibility_reason)}">Eligible*</span>`
+          : `<span class="pill ok">Eligible</span>`;
+      const criteriaHtml = CRITERIA_ORDER.map(key => {
+        const c = (r.criteria && r.criteria[key]) || {};
+        const notExtracted = c.score === null || c.score === undefined;
+        const width = notExtracted ? 0 : Math.max(0, Math.min(100, c.score));
+        const value = escapeHtml(c.raw_value || 'not extracted');
+        return `<div class="criterion${notExtracted ? ' muted' : ''}"><span>${CRITERIA_LABELS[key]}</span>`
+          + `<b>${value}</b><i class="crit-bar" style="--w:${width}%"></i></div>`;
+      }).join('');
+      return `<div class="card grade-card">
+        <div class="grade-card-head">
+          <div>
+            <div class="grade-insurer">${escapeHtml(r.insurer)}</div>
+            <div class="grade-product">${escapeHtml(formatProductName(r.product_name))} · ${completeness}% data completeness</div>
+          </div>
+          <div class="grade-overall">
+            <div class="grade-ring ${ring}" style="--pct:${score}"><span>${score}</span></div>
+            ${eligPill}
+          </div>
+        </div>
+        <div class="criteria-list">${criteriaHtml}</div>
+      </div>`;
+    }).join('');
+  }
+
   async function fetchLifeComparison() {
     setCompareState('loading');
     try {
@@ -1039,10 +1106,8 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setDataSource(data.data_source);
+      renderGradeBoard(data.results);
       document.getElementById('live-mode-note').style.display = 'inline';
-      // Full re-render of grade-board from `data.results` is a later implementation-slice
-      // task (see 11-DATA-CONNECTION.md) — this call proves the wiring: real request, real
-      // response, real data_source read off the payload rather than hardcoded.
       setCompareState('loaded');
     } catch (err) {
       setCompareState('error');
