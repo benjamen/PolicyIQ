@@ -276,7 +276,23 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
             # separately-branded product line worth comparing anyway,
             # since white-label terms commonly differ from the
             # underwriter's own-branded product.
-            trusted_document_domains=("www.aa.co.nz",),
+            #
+            # AA Insurance's general-insurance documents (2026-08-01) are
+            # seeded here too, not as their own InsurerSeed - both brands
+            # share this one root domain (aainsurance.co.nz), and
+            # test_registry.py enforces one seed per domain. They still
+            # become two separate DB Insurer rows ("AA Life" and "AA
+            # Insurance") via their own one-off setup scripts - the
+            # registry's InsurerSeed is about "one crawl target per real
+            # website", not a 1:1 mapping to DB rows (same reasoning as
+            # AIA's single seed covering its life and health documents).
+            # AA Insurance's real documents are hosted on
+            # assets.ctfassets.net, confirmed live via a genuine
+            # Playwright browser rendering /manage-policy/policy-
+            # documents/ (client-side JS site - a plain non-JS request
+            # only sees an empty shell, which is what led to the earlier,
+            # wrong "login-gated" finding).
+            trusted_document_domains=("www.aa.co.nz", "assets.ctfassets.net"),
             # The wording page lists the current set (filenames dated
             # "Dec25", under .../april26/) alongside three older,
             # clearly superseded version sets on the same page. Seeded
@@ -293,6 +309,10 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
                 "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/05_AALI_Policy%20Documents_Serious_Illness_Cover_Dec25.pdf",
                 "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/06_AALI_Policy%20Documents_Income_Protection_Cover_Dec25.pdf",
                 "https://www.aa.co.nz/content/dam/nzaa/02-services/insurance/life-insurance/policy-documents/april26/07_AALI_Policy%20Documents_Serious%20Injury%20Cover_Dec25.pdf",
+                "https://assets.ctfassets.net/c28a1yh3tefi/3AOOcXPg3ujIRTHxdZpPst/7d71d2eed4320a1b93ad008c59385331/AAI_Home_Insurance_Policy_July_2026.pdf",
+                "https://assets.ctfassets.net/c28a1yh3tefi/4nXZU7RDYXnFspKbVuAp0z/01aa10e7a7dafbbd89ae4428b14622a8/AAI_Contents_Insurance_Policy_July_2026.pdf",
+                "https://assets.ctfassets.net/c28a1yh3tefi/33CBO6W49aqp32KJvLxSLV/e275c0335cd488a6e6742f29225e1d52/AAI_Comprehensive_Car_Insurance_Policy.pdf",
+                "https://assets.ctfassets.net/c28a1yh3tefi/4cg0wcwk45dZeku3PrSztE/8ace22646f5460a2148a75df1fd257db/AAI_Landlord_Insurance_Policy_July_2026.pdf",
             ),
             excluded_path_substrings=DEFAULT_EXCLUDED_PATH_SUBSTRINGS + (
                 "/15-nov-2024-v2/", "/10-july-2024-v2/", "/5-august-2029-v2/",
@@ -325,22 +345,17 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
 # the pattern on one insurer before scaling the registry (see
 # docs/07-ROADMAP.md's original Phase 1 scope: AA Insurance, AMI, State,
 # Tower, NZI, Vero). Crawlability researched live for all 6: AMI, Tower,
-# Vero, State are directly crawlable (real policy wording PDFs linked right
-# on their product pages); NZI's documents sit behind an interactive
-# search form (select Insurance type + Brand, then submit) this crawler
-# can't drive yet - re-confirmed 2026-07-31 via direct fetch of two real,
-# individually-verified nzi.co.nz document URLs (Distinction Home/Contents
-# wordings): both robots.txt and the documents themselves return a clean
-# Akamai 403 "Access Denied" for this project's honest User-Agent, the
-# same WAF-blocked category as www.aia.co.nz, not just a form-driving
-# problem; AA Insurance's obvious "Policy documents" link (re-checked
-# 2026-07-31 at aainsurance.co.nz/manage-policy/policy-documents/...) is
-# confirmed still a login-gated customer portal (returns an HTML login
-# page, not a PDF) - its real public document wasn't found in this pass.
-# Note: theaa.com ("The AA", UK) publishes similarly-named policy
-# booklets under an "AA" brand too - a genuinely different organisation
-# in a different country/regulatory regime, not a substitute source for
-# AA Insurance NZ.
+# Vero, State, FMG are directly crawlable with a plain honest-UA request
+# (real policy wording PDFs linked right on their product pages). AA
+# Insurance and NZI were initially misdiagnosed as blocked (a login wall,
+# and an Akamai WAF, respectively) from plain curl testing alone -
+# corrected 2026-08-01: both are real client-side-rendered sites where a
+# genuine Playwright browser (not a header-spoofed script) reaches the
+# real public content a bare request can't render/pass; see their
+# individual entries below for what was actually found. Note: theaa.com
+# ("The AA", UK) publishes similarly-named policy booklets under an "AA"
+# brand too - a genuinely different organisation in a different country/
+# regulatory regime, not a substitute source for AA Insurance NZ.
 GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
     InsurerSeed(
         "AMI",
@@ -432,6 +447,68 @@ GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
             known_document_urls=(
                 "https://www.fmg.co.nz/globalassets/what-we-cover/policy-wordings/policy-wordings-2026-27/home-policy-wording-july-26.pdf",
                 "https://www.fmg.co.nz/globalassets/what-we-cover/policy-wordings/policy-wordings-2026-27/household-contents-policy-wording-July-26.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "NZI", "https://www.nzi.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Corrected 2026-08-01: NZI's Akamai WAF blocks non-browser
+            # HTTP clients (confirmed: bare curl and this project's honest-
+            # UA curl both get a clean TLS handshake then a 403 "Access
+            # Denied" or an HTTP/2 stream kill) but does NOT block a
+            # genuine Playwright browser (real TLS/JS fingerprint, no
+            # spoofing) - a real browser session fetched these two real,
+            # current (Distinction Home/Contents, NZI's highest cover
+            # tier) documents cleanly via their friendly nzi.co.nz/
+            # documents/ URLs. Placed the same one-off, human-verified way
+            # as AMI/State's car documents.
+            known_document_urls=(
+                "https://www.nzi.co.nz/documents/distinction-home-policy",
+                "https://www.nzi.co.nz/documents/distinction-contents-policy",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "Trade Me Insurance", "https://www.trademeinsurance.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: linked directly from /house-
+            # insurance, /contents-insurance, /car-insurance (the "Plus"
+            # tier, comprehensive cover for car) - no WAF issue, plain
+            # honest-UA requests work fine. Documents are hosted on a
+            # sibling domain (info.trademeinsurance.co.nz), so
+            # trusted_document_domains is needed for _is_in_scope() (same
+            # pattern as AA Life/nib's sibling-domain documents). Note:
+            # this project's real HttpxFetcher can't download these
+            # directly - info.trademeinsurance.co.nz loops forever on HEAD
+            # requests to these redirected paths (confirmed via direct
+            # httpx.head() test) while GET on the exact same URL works
+            # fine; the one-off ingest for this insurer used a GET-only
+            # Fetcher variant instead of touching HttpxFetcher (which every
+            # other insurer's real HEAD support still needs).
+            trusted_document_domains=("info.trademeinsurance.co.nz",),
+            known_document_urls=(
+                "http://info.trademeinsurance.co.nz/pw/tmi-house-plus-09-24.pdf",
+                "http://info.trademeinsurance.co.nz/pw/tmi-contents-plus-09-24.pdf",
+                "http://info.trademeinsurance.co.nz/pw/tmi-car-comprehensive-09-24.pdf",
+                "http://info.trademeinsurance.co.nz/pw/tmi-landlords-plus-09-24.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "Initio", "https://initio.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: all 4 real, current documents
+            # linked directly from /faqs/policy-wordings/ - no WAF issue,
+            # first-party domain, plain honest-UA GET works fine end to
+            # end (download_and_version succeeded via the standard
+            # HttpxFetcher, unlike Trade Me Insurance above).
+            known_document_urls=(
+                "https://initio.co.nz/policy-wording/initio_home_policy_NZ1811.pdf",
+                "https://initio.co.nz/policy-wording/initio_contents_policy_NZ1811.pdf",
+                "https://initio.co.nz/policy-wording/initio_motor_vehicle_insurance_policy_NZ2105.pdf",
+                # Landlord and holiday-home cover share one combined wording.
+                "https://initio.co.nz/policy-wording/initio_landlord_holidayhome_policy_NZ1811.pdf",
             ),
         ),
     ),
@@ -593,20 +670,45 @@ SPECIALTY_INSURER_SEED: tuple[InsurerSeed, ...] = (
             ),
         ),
     ),
-    # Researched 2026-08-01, not added: PD Insurance (pdinsurance.co.nz) is
-    # WAF-blocked for this project's honest User-Agent (403 on both the
-    # product page and robots.txt fetch) - no evasion attempted, matching
-    # the NZI/AA Insurance precedent. Petcover's real NZ policy documents
-    # are hosted on sovereignaustralia.com.au under a "PCNZ-PDS" naming
-    # scheme - plausible but not yet individually verified live; deferred
-    # rather than seeded on an unconfirmed guess. "Nautical Insurance"
-    # (nautical.co.nz) is NOT an independent insurer - its own site states
-    # it's "an underwriting agency of Vero Insurance New Zealand" with no
-    # policy document of its own, same category as the brokers this
-    # catalog already excludes (Gallagher, PIC, Baileys) - Vero's own real
-    # Marine Pleasurecraft wording (seeded above under Vero) is the
-    # correct real source for this cover, not a separate "Nautical
-    # Insurance" row.
+    InsurerSeed(
+        "PD Insurance", "https://www.pdinsurance.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Corrected 2026-08-01: pdinsurance.co.nz's WAF blocks non-
+            # browser HTTP clients (bare/honest-UA curl both 403) but a
+            # genuine Playwright browser reaches /pet-insurance/ cleanly
+            # and its real policy wording link, hosted on a separate
+            # subdomain (manage.pet.pdinsurance.co.nz) that has no bot-
+            # gating of its own. Underwritten by Pacific International
+            # Insurance Pty Limited (confirmed in the document's own text).
+            trusted_document_domains=("manage.pet.pdinsurance.co.nz",),
+            known_document_urls=(
+                "https://manage.pet.pdinsurance.co.nz/Docs/Policy_Wording/PD_NZ_JUL_2022_PET_INSURANCE_POLICY_WORDING.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "Petcover", "https://www.petcovergroup.com/nz/",
+        crawl_policy=CrawlPolicy(
+            # Corrected 2026-08-01: the earlier "hosted on
+            # sovereignaustralia.com.au, not individually verified" note
+            # was superseded by a better find - Petcover's real, current
+            # (v15062026) policy wordings are linked directly from their
+            # own /nz/dog-insurance/ product page, hosted on their own
+            # domain (petcovergroup.com), no WAF issue. Four tiers
+            # (Superior/Mid-Range/Economy/Catastrophe) - "Superior" (their
+            # most comprehensive) seeded.
+            known_document_urls=(
+                "https://www.petcovergroup.com/nz/wp-content/uploads/sites/18/2026/06/PCNZ-PDS-PRO-Superior-v15062026.pdf",
+            ),
+        ),
+    ),
+    # "Nautical Insurance" (nautical.co.nz) is NOT an independent insurer -
+    # its own site states it's "an underwriting agency of Vero Insurance
+    # New Zealand" with no policy document of its own, same category as
+    # the brokers this catalog already excludes (Gallagher, PIC, Baileys)
+    # - Vero's own real Marine Pleasurecraft wording (seeded above under
+    # Vero) is the correct real source for this cover, not a separate
+    # "Nautical Insurance" row.
 )
 
 

@@ -119,25 +119,31 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
         "AA Insurance", "https://www.aainsurance.co.nz",
         ("house", "contents", "car", "travel", "landlord", "business"),
         "Real ICNZ general-insurer member (a joint venture between Vero/"
-        "Suncorp and the NZAA); its 'Policy documents' link "
-        "(aainsurance.co.nz/manage-policy/policy-documents/...) is a "
-        "login-gated customer portal, not a public PDS - no public document "
-        "found as of 2026-07-31.",
+        "Suncorp and the NZAA). Its 'Policy documents' page is a real, "
+        "public, client-side-rendered documents library, not a login wall "
+        "as first thought - a plain non-JS request only sees an empty "
+        "shell (fixed 2026-08-01).",
     ),
     CatalogEntry(
         "NZI", "https://www.nzi.co.nz", ("house", "contents", "business"),
-        "WAF-blocked for this project's honestly-identified crawler (Akamai "
-        "403 on both robots.txt and its real document URLs), confirmed "
-        "2026-07-31 - same category as AIA's main domain, no evasion attempted.",
+        "Its Akamai WAF blocks non-browser HTTP clients but not a genuine "
+        "browser session - the real Distinction Home/Contents documents "
+        "(NZI's highest cover tier) were fetched that way, no evasion "
+        "involved (fixed 2026-08-01).",
     ),
     CatalogEntry(
-        "Trade Me Insurance", "https://www.trademeinsurance.co.nz", ("house", "contents", "car"),
-        "White-label home/contents/car product underwritten by Tower.",
+        "Trade Me Insurance", "https://www.trademeinsurance.co.nz",
+        ("house", "contents", "car", "landlord"),
+        "White-label home/contents/car/landlord product underwritten by "
+        "Tower; also sells a separate Landlord's Plus wording (found "
+        "2026-08-01 alongside the house/contents/car docs, not previously "
+        "tracked).",
     ),
     CatalogEntry(
         "Initio", "https://initio.co.nz", ("house", "contents", "car", "landlord"),
         "NZ's first 100%-online property insurer (est. 2011); all policies "
-        "underwritten by IAG New Zealand.",
+        "underwritten by IAG New Zealand. Landlord cover and holiday-home "
+        "cover share one combined wording document.",
     ),
     # --- Health insurance ---
     CatalogEntry(
@@ -161,9 +167,17 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
     ),
     CatalogEntry(
         "PD Insurance", "https://www.pdinsurance.co.nz", ("pet",),
-        "Dog/cat insurance specialist; underwritten by Pacific International Insurance.",
+        "Dog/cat insurance specialist; underwritten by Pacific International "
+        "Insurance. Its WAF blocks non-browser clients but not a genuine "
+        "browser session (fixed 2026-08-01).",
     ),
-    CatalogEntry("Petcover", "https://www.petcovergroup.com/nz/", ("pet",)),
+    CatalogEntry(
+        "Petcover", "https://www.petcovergroup.com/nz/", ("pet",),
+        "Real, current (v15062026) wordings for 4 tiers hosted directly on "
+        "petcovergroup.com - not yet ingested: its PDF is heavy enough that "
+        "this project's Docling OCR fallback times out even at 25+ minutes "
+        "(a local processing limitation, not a source-access problem).",
+    ),
     CatalogEntry("SPCA Pet Insurance", "https://www.spcapetinsurance.co.nz", ("pet",)),
     CatalogEntry("Pet-n-Sur", "https://www.petnsur.co.nz", ("pet",)),
     # --- Travel specialist ---

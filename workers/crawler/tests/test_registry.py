@@ -30,10 +30,15 @@ def test_every_seed_has_document_hub_paths_to_probe():
 
 def test_aa_life_known_document_urls_are_all_on_a_trusted_domain():
     """AA Life's real documents live on www.aa.co.nz, not
-    aainsurance.co.nz (its website_root) - every known_document_urls
-    entry must actually be covered by trusted_document_domains, or
-    _is_in_scope() would flag them all as off-domain."""
+    aainsurance.co.nz (its website_root); this seed also carries AA
+    Insurance's general-insurance documents (assets.ctfassets.net) since
+    both brands share the aainsurance.co.nz root domain - every
+    known_document_urls entry must actually be covered by
+    trusted_document_domains, or _is_in_scope() would flag them all as
+    off-domain."""
     aa_life = next(i for i in discover_insurers() if i.name == "AA Life")
     assert "www.aa.co.nz" in aa_life.crawl_policy.trusted_document_domains
+    assert "assets.ctfassets.net" in aa_life.crawl_policy.trusted_document_domains
+    trusted = {aa_life.website_root.split("://")[1], *aa_life.crawl_policy.trusted_document_domains}
     for url in aa_life.crawl_policy.known_document_urls:
-        assert url.startswith("https://www.aa.co.nz/")
+        assert any(url.startswith(f"https://{domain}/") for domain in trusted), url
