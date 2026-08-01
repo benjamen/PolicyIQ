@@ -71,6 +71,7 @@ def _source_ref(insurer_name: str, fact_row, documents_by_id: dict[uuid.UUID, Do
         page=fact_row.page,
         paragraph_ref=fact_row.paragraph_ref,
         confidence=fact_row.confidence,
+        document_id=str(fact_row.document_id),
     )
 
 
@@ -264,7 +265,26 @@ def _general_source_ref(insurer_name: str, fact_row, sections_by_id: dict[uuid.U
         page=fact_row.page,
         paragraph_ref=fact_row.paragraph_ref,
         confidence=fact_row.confidence,
+        document_id=str(section.document_id),
     )
+
+
+def get_section_text(session: Session, *, document_id: str, page: int) -> str | None:
+    """Backs the citation "view source" endpoint - Phase 1 sections are one
+    per PDF page (app/pipeline/sections.py), so (document_id, page) always
+    identifies at most one Section, the same pair every SourceRef already
+    carries (document_id, page). Returns None both when no such Section
+    exists and when it exists but predates the backfill (data/
+    backfill_section_text.py) - the API layer treats both as 404, since
+    neither has real text to show."""
+    section = session.execute(
+        select(Section).where(
+            Section.document_id == document_id,
+            Section.page_start <= page,
+            Section.page_end >= page,
+        )
+    ).scalars().first()
+    return section.text if section is not None else None
 
 
 def load_general_insurance_profiles(session: Session, *, product_type: str) -> list[GeneralProductProfile]:

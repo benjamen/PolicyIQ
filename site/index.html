@@ -281,7 +281,35 @@
   /* ---- Compare view ---- */
   .compare-cell-diff { background: var(--amber-soft); border-left: 2px solid var(--amber); }
   .compare-cell-missing { color: var(--text-faint); font-style: italic; }
-  .loc-ref { font-size: 11px; color: var(--text-faint); display: block; margin-top: 3px; }
+  .loc-ref {
+    font-size: 11px; color: var(--text-faint); display: block; margin-top: 3px;
+    background: none; border: none; padding: 0; font: inherit; text-align: left; cursor: pointer;
+    border-bottom: 1px dotted transparent;
+  }
+  .loc-ref:hover { color: var(--teal); border-bottom-color: var(--teal); }
+
+  /* ---- Source viewer popover (citation "view source") ---- */
+  .source-pop {
+    position: fixed; z-index: 60; width: min(420px, calc(100vw - 32px)); max-height: 60vh;
+    background: var(--paper-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden;
+  }
+  .source-pop-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    padding: 12px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .source-pop-title { font-size: 12.5px; font-weight: 650; line-height: 1.4; }
+  .source-pop-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+  .source-pop-close {
+    border: none; background: none; color: var(--text-faint); cursor: pointer;
+    font-size: 15px; line-height: 1; padding: 2px; flex-shrink: 0;
+  }
+  .source-pop-close:hover { color: var(--text); }
+  .source-pop-body {
+    padding: 12px 14px; overflow-y: auto; font-size: 12.5px; line-height: 1.6;
+    color: var(--text-muted); white-space: pre-wrap; font-family: ui-monospace, monospace;
+  }
+  .source-pop-body.state-loading, .source-pop-body.state-error { color: var(--text-faint); font-family: inherit; font-style: italic; }
 
   .btn-ghost {
     border: 1px solid var(--border-strong); background: var(--paper-raised); color: var(--text);
@@ -802,6 +830,16 @@
     </section>
   </main>
 </div>
+<div class="source-pop" id="sourcePop" style="display:none">
+  <div class="source-pop-head">
+    <div>
+      <div class="source-pop-title" id="sourcePopTitle"></div>
+      <div class="source-pop-sub" id="sourcePopSub"></div>
+    </div>
+    <button class="source-pop-close" id="sourcePopClose" type="button" aria-label="Close">✕</button>
+  </div>
+  <div class="source-pop-body" id="sourcePopBody"></div>
+</div>
 <script>
   const navItems = document.querySelectorAll('.nav-item');
   const views = document.querySelectorAll('.view');
@@ -1130,9 +1168,63 @@
     if (!f) return '<td class="compare-cell-missing">Not found</td>';
     const isMoney = f.category === 'limit' && f.detail;
     const value = f.category === 'exclusion' ? f.name : (f.detail || f.name);
-    const locRef = f.source ? `<span class="loc-ref">p.${f.source.page} · ${escapeHtmlGeneral(f.source.document)}</span>` : '';
+    let locRef = '';
+    if (f.source) {
+      const label = `p.${f.source.page} · ${escapeHtmlGeneral(f.source.document)}`;
+      locRef = f.source.document_id
+        ? `<button type="button" class="loc-ref" data-doc-id="${escapeHtmlGeneral(f.source.document_id)}" data-page="${f.source.page}" data-label="${escapeHtmlGeneral(label)}">${label} · view source</button>`
+        : `<span class="loc-ref" style="cursor:default">${label}</span>`;
+    }
     return `<td><span class="cat-pill ${f.category}">${f.category}</span><div class="cell-value${isMoney ? ' mono-val' : ''}">${escapeHtmlGeneral(value)}</div>${locRef}</td>`;
   }
+
+  /* ---- Citation "view source" popover ---- */
+  const sourcePop = document.getElementById('sourcePop');
+  const sourcePopTitle = document.getElementById('sourcePopTitle');
+  const sourcePopSub = document.getElementById('sourcePopSub');
+  const sourcePopBody = document.getElementById('sourcePopBody');
+
+  function closeSourcePop() { sourcePop.style.display = 'none'; }
+  document.getElementById('sourcePopClose').addEventListener('click', closeSourcePop);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSourcePop(); });
+  document.addEventListener('click', (e) => {
+    if (sourcePop.style.display === 'none') return;
+    if (sourcePop.contains(e.target) || e.target.closest('.loc-ref')) return;
+    closeSourcePop();
+  });
+
+  async function openSourcePop(button) {
+    const { docId, page, label } = button.dataset;
+    const rect = button.getBoundingClientRect();
+    sourcePop.style.display = 'flex';
+    sourcePop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 428)) + 'px';
+    const top = rect.bottom + 8;
+    sourcePop.style.top = (top + 320 > window.innerHeight ? Math.max(8, rect.top - 328) : top) + 'px';
+    sourcePopTitle.textContent = 'Source text';
+    sourcePopSub.textContent = label;
+    sourcePopBody.textContent = 'Loading…';
+    sourcePopBody.className = 'source-pop-body state-loading';
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/documents/${docId}/pages/${page}`, { credentials: 'include' });
+      if (res.status === 404) {
+        sourcePopBody.textContent = "This page's source text hasn't been backfilled yet.";
+        sourcePopBody.className = 'source-pop-body state-error';
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      sourcePopBody.textContent = data.text;
+      sourcePopBody.className = 'source-pop-body';
+    } catch (err) {
+      sourcePopBody.textContent = "Couldn't load source text — try again.";
+      sourcePopBody.className = 'source-pop-body state-error';
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.loc-ref[data-doc-id]');
+    if (btn) openSourcePop(btn);
+  });
 
   function ensureSelection(type, results) {
     if (!selectedInsurers[type]) {

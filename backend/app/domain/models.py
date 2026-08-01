@@ -54,6 +54,13 @@ class SourceRef:
     page: int
     paragraph_ref: str
     confidence: float
+    # Added for the "view source" citation feature - looked up together with
+    # `page` above via GET /api/v1/documents/{document_id}/pages/{page},
+    # rather than a separate section_id, since GradedFact/EligibilityRule
+    # sources (the life comparison path) only ever carry a document_id, not
+    # a section_id - keying by (document_id, page) works for every source
+    # shape this domain has, not just Benefit/Limit/Exclusion's.
+    document_id: str | None = None
 
 
 @dataclass(frozen=True)

@@ -44,6 +44,9 @@ def test_migration_upgrade_creates_full_schema():
         assert "policy_id" in policy_version_columns
         assert "product_id" not in policy_version_columns
 
+        section_columns = {c["name"] for c in inspect(engine).get_columns("section")}
+        assert "text" in section_columns
+
         engine.dispose()
 
 

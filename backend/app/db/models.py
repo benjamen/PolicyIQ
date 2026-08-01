@@ -155,6 +155,12 @@ class Section(Base):
     page_start: Mapped[int] = mapped_column(Integer)
     page_end: Mapped[int] = mapped_column(Integer)
     paragraph_ref: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # The real parsed page text (route_ocr() output) - nullable so existing
+    # rows from before this column existed stay valid until backfilled
+    # (see data/backfill_section_text.py). Lets a citation's source page be
+    # served straight from the DB instead of re-running OCR against the
+    # stored PDF on every request.
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class Benefit(Base):

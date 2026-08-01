@@ -30,6 +30,7 @@ class SourceRefOut(BaseModel):
     page: int
     paragraph_ref: str
     confidence: float
+    document_id: str | None = None
 
 
 class CriterionOut(BaseModel):

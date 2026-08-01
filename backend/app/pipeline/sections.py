@@ -26,6 +26,7 @@ def build_sections(
             page_start=page.page_number,
             page_end=page.page_number,
             paragraph_ref=None,
+            text=page.text,
         )
         session.add(section)
         sections.append(section)
