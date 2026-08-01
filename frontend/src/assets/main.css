@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-teal: #0b6e5a;
+    --color-paper: #f1f2ed;
+    --color-ink: #12181d;
+  }
+  .dark {
+    --color-teal: #33a98a;
+    --color-paper: #0d1215;
+    --color-ink: #eef0ec;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-paper-raised dark:bg-paper-raised-dark rounded-lg shadow-card dark:shadow-card-dark border border-black/5 dark:border-white/10;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-md bg-teal dark:bg-teal-dark text-white font-medium text-sm
+           hover:opacity-90 active:scale-[0.98] transition-all duration-150 cursor-pointer
+           focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-md border border-black/10 dark:border-white/15
+           text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-150 cursor-pointer;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-covered {
+    @apply badge bg-teal-soft dark:bg-teal-soft-dark text-teal dark:text-teal-dark;
+  }
+  .badge-excluded {
+    @apply badge bg-brick-soft dark:bg-brick-soft/20 text-brick dark:text-brick-dark;
+  }
+  .badge-limited {
+    @apply badge bg-amber-soft dark:bg-amber-soft/20 text-amber dark:text-amber-dark;
+  }
+  .badge-silent {
+    @apply badge bg-slate-soft dark:bg-slate-soft/20 text-slate dark:text-slate-dark;
+  }
+  .stat-value {
+    @apply text-2xl font-semibold font-mono tabular-nums;
+  }
+  .section-title {
+    @apply text-lg font-semibold tracking-tight;
+  }
+  .input-field {
+    @apply w-full px-3 py-2 rounded-md border border-black/10 dark:border-white/15 bg-white dark:bg-paper-raised-dark
+           text-sm placeholder:text-slate dark:placeholder:text-slate-dark
+           focus:outline-none focus:ring-2 focus:ring-teal/30 dark:focus:ring-teal-dark/30 focus:border-teal dark:focus:border-teal-dark
+           transition-colors duration-150;
+  }
+  .select-field {
+    @apply input-field appearance-none cursor-pointer;
+  }
+}
