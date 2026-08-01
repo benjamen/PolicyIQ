@@ -632,6 +632,7 @@
         <h2>NZ insurer coverage</h2>
         <span class="pill neutral" id="insurers-data-source-pill">Loading…</span>
       </div>
+      <p class="surface-sub">Tap an insurer to see their real extracted benefits, limits, and exclusions by type.</p>
       <div class="grade-board" id="insurers-loading" style="display:none">
         <div class="card skeleton-card">
           <div class="skeleton skeleton-line" style="width:60%;height:16px"></div>
@@ -648,10 +649,9 @@
         <button class="btn-ghost" id="btn-retry-insurers">Retry</button>
       </div>
       <div id="insurers-loaded">
-        <div class="table-wrap">
-          <table id="insurers-table"></table>
-        </div>
-        <p class="grade-footnote">A real, human-researched map of NZ's life/general/health insurers (RBNZ, ICNZ, FSC, and each insurer's own site) — "Data" means this project has actually ingested real, citation-verified documents; "Offered" alone means the insurer sells that cover but we haven't crawled/authored it yet. Loaded live from <code class="mono">/api/v1/insurers/coverage</code>.</p>
+        <div class="gallery" id="insurers-gallery"></div>
+        <div id="insurer-detail"></div>
+        <p class="grade-footnote">A real, human-researched map of NZ's life/general/health insurers (RBNZ, ICNZ, FSC, and each insurer's own site) — a filled type pill means this project has actually ingested real, citation-verified documents; an outlined one means the insurer sells that cover but we haven't crawled/authored it yet. Loaded live from <code class="mono">/api/v1/insurers/coverage</code> and <code class="mono">/api/v1/compare/general</code>.</p>
       </div>
     </section>
 
@@ -1331,6 +1331,44 @@
   // inaccurate schema on either - same merge this always did, just now
   // reachable for every type via the type strip instead of hardcoded to run
   // unconditionally on load.
+  // Shared by the Compare panel and the Insurers detail view - both need
+  // "every insurer's facts for this type", just rendered into different
+  // DOM. House/Contents also fold in the DB-internal "home_contents" type
+  // (AMI/State's one genuinely-combined document) so a Tower (house+
+  // contents) row and an AMI (home_contents) row land in the same result
+  // set without forcing an inaccurate schema on either. Throws on a real
+  // fetch failure or a 401 (caller decides how to surface that); returns
+  // { results, dataSource } and caches by type either way.
+  async function fetchTypeResults(type) {
+    if (generalCache[type]) return { results: generalCache[type], dataSource: 'extracted_verified' };
+    const productTypes = (type === 'house' || type === 'contents') ? [type, 'home_contents'] : [type];
+    const responses = await Promise.all(productTypes.map(product_type =>
+      fetch(`${API_BASE}/api/v1/compare/general`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_type }),
+      })
+    ));
+    for (const res of responses) {
+      if (res.status === 401) { showLogin(); throw new Error('unauthenticated'); }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    }
+    const datas = await Promise.all(responses.map(r => r.json()));
+    const byInsurer = new Map();
+    let dataSource = 'extracted_verified';
+    for (const data of datas) {
+      dataSource = data.data_source;
+      for (const r of data.results) {
+        if (!byInsurer.has(r.insurer)) byInsurer.set(r.insurer, { insurer: r.insurer, product_name: r.product_name, facts: [] });
+        byInsurer.get(r.insurer).facts.push(...r.facts);
+      }
+    }
+    const results = [...byInsurer.values()];
+    generalCache[type] = results;
+    return { results, dataSource };
+  }
+
   async function fetchGeneralComparisonFor(type) {
     document.getElementById('general-heading').textContent = TYPE_LABELS[type] + ' insurance';
     if (generalCache[type]) {
@@ -1339,31 +1377,7 @@
     }
     setGeneralCompareState('loading');
     try {
-      const productTypes = (type === 'house' || type === 'contents') ? [type, 'home_contents'] : [type];
-      const responses = await Promise.all(productTypes.map(product_type =>
-        fetch(`${API_BASE}/api/v1/compare/general`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product_type }),
-        })
-      ));
-      for (const res of responses) {
-        if (res.status === 401) { showLogin(); return; }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      }
-      const datas = await Promise.all(responses.map(r => r.json()));
-      const byInsurer = new Map();
-      let dataSource = 'extracted_verified';
-      for (const data of datas) {
-        dataSource = data.data_source;
-        for (const r of data.results) {
-          if (!byInsurer.has(r.insurer)) byInsurer.set(r.insurer, { insurer: r.insurer, product_name: r.product_name, facts: [] });
-          byInsurer.get(r.insurer).facts.push(...r.facts);
-        }
-      }
-      const results = [...byInsurer.values()];
-      generalCache[type] = results;
+      const { results, dataSource } = await fetchTypeResults(type);
       setGeneralDataSource(dataSource);
       renderGeneralPanel(type, results);
       setGeneralCompareState('loaded');
@@ -1444,28 +1458,103 @@
     return div.innerHTML;
   }
 
-  function renderInsurerCoverage(results) {
-    const table = document.getElementById('insurers-table');
-    if (!results || results.length === 0) {
-      table.innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-faint)">No insurer catalog data available.</td></tr></tbody>';
+  let insurerCoverageResults = [];
+  let selectedInsurerName = null;
+
+  function renderInsurersGallery() {
+    const gallery = document.getElementById('insurers-gallery');
+    if (!insurerCoverageResults.length) {
+      gallery.innerHTML = '<div class="empty-state">No insurer catalog data available.</div>';
       return;
     }
-    const theadHtml = `<tr><th style="width:26%">Insurer</th>${PRODUCT_TYPE_ORDER.map(pt => `<th>${PRODUCT_TYPE_LABELS[pt]}</th>`).join('')}<th>Notes</th></tr>`;
-    const tbodyHtml = results.map(r => {
-      const typeByKey = Object.fromEntries(r.types.map(t => [t.product_type, t]));
-      const cellsHtml = PRODUCT_TYPE_ORDER.map(pt => {
-        const t = typeByKey[pt];
-        if (!t || !t.offered) return '<td class="compare-cell-missing">—</td>';
-        return t.covered
-          ? '<td><span class="pill ok" style="display:inline-block">Data</span></td>'
-          : '<td><span class="pill warn" style="display:inline-block">Offered, not ingested</span></td>';
-      }).join('');
-      const website = r.website ? `<a href="${escapeHtmlInsurers(r.website)}" target="_blank" rel="noopener">${escapeHtmlInsurers(r.name)}</a>` : escapeHtmlInsurers(r.name);
-      const notes = r.notes ? escapeHtmlInsurers(r.notes) : '';
-      return `<tr><td>${website}</td>${cellsHtml}<td style="max-width:36ch;font-size:12.5px;color:var(--text-faint)">${notes}</td></tr>`;
+    gallery.innerHTML = insurerCoverageResults.map(entry => {
+      const offeredTypes = entry.types.filter(t => t.offered);
+      const coveredCount = offeredTypes.filter(t => t.covered).length;
+      const chips = offeredTypes.map(t =>
+        `<span class="pill ${t.covered ? 'ok' : 'warn'}" style="display:inline-block;margin:0 4px 4px 0">${escapeHtmlInsurers(PRODUCT_TYPE_LABELS[t.product_type])}</span>`
+      ).join('');
+      const isSel = entry.name === selectedInsurerName;
+      return `<div class="prov-card${isSel ? ' selected' : ''}" data-insurer="${escapeHtmlInsurers(entry.name)}">
+        <div class="prov-card-top">
+          <div class="prov-name">${escapeHtmlInsurers(entry.name)}</div>
+          <div class="prov-check">✓</div>
+        </div>
+        <div>${chips || '<span class="compare-cell-missing">Not yet researched</span>'}</div>
+        ${entry.notes ? `<div class="prov-facts" style="color:var(--text-faint)">${escapeHtmlInsurers(entry.notes)}</div>` : ''}
+        <div class="prov-meta">
+          <span>${coveredCount ? 'Tap to view benefits' : 'No data ingested yet'}</span>
+          <span class="prov-count">${coveredCount} of ${offeredTypes.length} types</span>
+        </div>
+      </div>`;
     }).join('');
-    table.innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
+    gallery.querySelectorAll('.prov-card').forEach(card => {
+      card.addEventListener('click', () => selectInsurer(card.dataset.insurer));
+    });
   }
+
+  async function selectInsurer(name) {
+    selectedInsurerName = name === selectedInsurerName ? null : name;
+    renderInsurersGallery();
+    const detail = document.getElementById('insurer-detail');
+    if (!selectedInsurerName) { detail.innerHTML = ''; return; }
+
+    const entry = insurerCoverageResults.find(r => r.name === selectedInsurerName);
+    const coveredTypes = entry.types.filter(t => t.covered).map(t => t.product_type);
+    detail.innerHTML = `<div class="card" style="padding:18px 20px 4px;margin-bottom:22px">
+      <div class="surface-head">
+        <h2 class="serif">${escapeHtmlInsurers(entry.name)}</h2>
+        <span class="surface-sub" style="margin:0">Loading benefits…</span>
+      </div>
+    </div>`;
+
+    if (coveredTypes.length === 0) {
+      detail.innerHTML = `<div class="card" style="padding:18px 20px">
+        <div class="surface-head"><h2 class="serif">${escapeHtmlInsurers(entry.name)}</h2></div>
+        <div class="empty-state">No real data ingested for ${escapeHtmlInsurers(entry.name)} yet.</div>
+      </div>`;
+      return;
+    }
+
+    const sections = [];
+    for (const dbType of coveredTypes) {
+      if (dbType === 'life_cover') {
+        sections.push(`<div class="section-head" style="margin:22px 0 8px"><h2 style="font-size:14px">Life Cover</h2></div>
+          <p class="surface-sub" style="margin-top:0">Life cover is graded against personal inputs (age, smoker status, occupation), not a flat fact list — see
+            <button class="nav-item" style="display:inline;width:auto;padding:0;color:var(--teal);font-weight:600" onclick="navigate('compare');selectType('life')">Compare → Life</button>
+            for ${escapeHtmlInsurers(entry.name)}'s graded comparison.</p>`);
+        continue;
+      }
+      try {
+        const { results } = await fetchTypeResults(dbType);
+        const row = results.find(r => r.insurer === entry.name);
+        if (!row || row.facts.length === 0) continue;
+        const rowsHtml = row.facts.map(f => {
+          const label = f.category === 'exclusion' ? 'Exclusion' : f.name;
+          return `<tr><td class="row-label">${escapeHtmlGeneral(label)}</td>${generalFactCell(f)}</tr>`;
+        }).join('');
+        sections.push(`
+          <div class="section-head" style="margin:22px 0 8px">
+            <h2 style="font-size:14px">${PRODUCT_TYPE_LABELS[dbType]}</h2>
+            <span class="surface-sub" style="margin:0">${row.facts.length} facts</span>
+          </div>
+          <div class="table-wrap"><table><tbody>${rowsHtml}</tbody></table></div>
+        `);
+      } catch (err) {
+        sections.push(`<div class="section-head" style="margin:22px 0 8px"><h2 style="font-size:14px">${PRODUCT_TYPE_LABELS[dbType]}</h2></div>
+          <div class="empty-state">Couldn't load ${PRODUCT_TYPE_LABELS[dbType]} data for ${escapeHtmlInsurers(entry.name)}.</div>`);
+      }
+    }
+
+    detail.innerHTML = `<div class="card" style="padding:18px 20px">
+      <div class="surface-head">
+        <h2 class="serif">${escapeHtmlInsurers(entry.name)}</h2>
+        <button class="btn-ghost" type="button" onclick="selectInsurer('${entry.name.replace(/'/g, "\\'")}')">Close</button>
+      </div>
+      ${entry.website ? `<a href="${escapeHtmlInsurers(entry.website)}" target="_blank" rel="noopener" class="loc-ref" style="margin:0 0 4px">${escapeHtmlInsurers(entry.website)} ↗</a>` : ''}
+      ${sections.join('') || '<div class="empty-state">No facts extracted yet for this insurer\'s covered types.</div>'}
+    </div>`;
+  }
+  window.selectInsurer = selectInsurer;
 
   async function fetchInsurerCoverage() {
     setInsurersState('loading');
@@ -1477,12 +1566,15 @@
       if (res.status === 401) { showLogin(); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      insurerCoverageResults = data.results;
       const total = data.results.length;
       const covered = data.results.filter(r => r.types.some(t => t.covered)).length;
       insurersDataSourcePill.textContent = `${covered} of ${total} insurers have real data`;
       insurersDataSourcePill.classList.toggle('ok', covered > 0);
       insurersDataSourcePill.classList.toggle('neutral', covered === 0);
-      renderInsurerCoverage(data.results);
+      renderInsurersGallery();
+      document.getElementById('insurer-detail').innerHTML = '';
+      selectedInsurerName = null;
       setInsurersState('loaded');
     } catch (err) {
       setInsurersState('error');
