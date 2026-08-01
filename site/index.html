@@ -293,18 +293,96 @@
     align-self: end; height: 38px;
   }
 
-  /* ---- Segmented tabs (compare mode) ---- */
-  .seg-tabs {
-    display: inline-flex; gap: 2px; padding: 3px; margin-bottom: 18px;
-    background: var(--paper-raised); border: 1px solid var(--border); border-radius: 999px;
-  }
-  .seg-tab {
-    border: none; background: none; padding: 7px 16px; border-radius: 999px;
-    font-size: 12.5px; font-weight: 600; color: var(--text-faint); cursor: pointer;
-  }
-  .seg-tab.on { background: var(--ink); color: var(--paper); }
   .compare-panel { display: none; }
   .compare-panel.active { display: block; }
+
+  /* ---- Type strip (compare mode picker) ---- */
+  .type-strip-wrap { margin-bottom: 22px; }
+  .type-strip-label {
+    font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--text-faint);
+    margin-bottom: 8px; font-weight: 650;
+  }
+  .type-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .type-pill {
+    flex-shrink: 0; display: flex; align-items: center; gap: 7px;
+    border: 1px solid var(--border); background: var(--paper-raised);
+    padding: 8px 13px 8px 14px; border-radius: 999px; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+  }
+  .type-pill:hover { border-color: var(--border-strong); color: var(--text); }
+  .type-pill .n {
+    font-size: 11px; font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+    padding: 1px 6px; border-radius: 999px; background: var(--slate-soft); color: var(--text-faint);
+  }
+  .type-pill.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .type-pill.on .n { background: #ffffff26; color: var(--paper); }
+  .type-pill.zero { color: var(--text-faint); }
+  .type-pill.zero .n { background: transparent; color: var(--text-faint); }
+
+  /* ---- Provider gallery ---- */
+  .surface-sub { font-size: 12.5px; color: var(--text-faint); margin: 3px 0 18px; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-bottom: 22px; }
+  .prov-card {
+    background: var(--paper-raised); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); padding: 13px 14px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .prov-card:hover { border-color: var(--border-strong); }
+  .prov-card.selected { border-color: var(--teal); background: var(--teal-soft); }
+  .prov-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .prov-name { font-family: ui-serif, Georgia, serif; font-size: 14.5px; font-weight: 650; line-height: 1.3; }
+  .prov-check {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--border-strong);
+    background: var(--paper); display: flex; align-items: center; justify-content: center;
+    color: transparent; font-size: 11px; font-weight: 800; margin-top: 1px;
+  }
+  .prov-card.selected .prov-check { background: var(--teal); border-color: var(--teal); color: #f4faf8; }
+  .prov-facts { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
+  .prov-facts .fact-row { display: flex; justify-content: space-between; gap: 10px; }
+  .prov-facts .fact-row span:first-child { color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prov-facts .fact-row b { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; flex-shrink: 0; }
+  .prov-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-faint); border-top: 1px solid var(--border); padding-top: 8px; margin-top: auto; }
+  .prov-count { background: var(--slate-soft); padding: 1.5px 7px; border-radius: 999px; font-weight: 650; }
+
+  .empty-state {
+    padding: 40px 24px; text-align: center; color: var(--text-faint); font-size: 13.5px;
+    background: var(--paper-raised); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg);
+  }
+
+  /* ---- Comparison toolbar + diff table ---- */
+  .compare-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 12px; padding: 8px 2px;
+  }
+  .selected-count { font-size: 13px; color: var(--text-muted); }
+  .selected-count b { color: var(--text); font-weight: 650; }
+  .toolbar-actions { display: flex; align-items: center; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-muted); cursor: pointer; user-select: none; }
+  .toggle {
+    width: 30px; height: 17px; border-radius: 999px; background: var(--slate-soft); position: relative;
+    border: 1px solid var(--border); flex-shrink: 0; transition: background .15s;
+  }
+  .toggle::after {
+    content: ""; position: absolute; top: 1px; left: 1px; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--paper-raised); box-shadow: 0 1px 2px #0003; transition: transform .15s;
+  }
+  .toggle.on { background: var(--teal); border-color: var(--teal); }
+  .toggle.on::after { transform: translateX(13px); }
+
+  td.row-label { font-weight: 600; color: var(--text); min-width: 180px; background: var(--paper); position: sticky; left: 0; }
+  .cat-pill {
+    display: inline-block; font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-bottom: 5px;
+  }
+  .cat-pill.limit { background: var(--teal-soft); color: var(--teal); }
+  .cat-pill.benefit { background: var(--slate-soft); color: var(--text-muted); }
+  .cat-pill.exclusion { background: var(--brick-soft); color: var(--brick); }
+  .cell-value { font-size: 13px; color: var(--text); line-height: 1.45; }
+  .cell-value.mono-val { font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 650; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-faint); margin: 14px 2px 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 
   /* ---- Life insurance filter bar ---- */
   .filter-card { padding: 16px 18px; margin-bottom: 22px; }
@@ -563,10 +641,9 @@
 
     <!-- ================= COMPARE ================= -->
     <section class="view" id="view-compare">
-      <div class="seg-tabs" role="tablist" aria-label="Comparison mode">
-        <button class="seg-tab on" data-compare-mode="life">Life Insurance</button>
-        <button class="seg-tab" data-compare-mode="general">General Insurance</button>
-        <button class="seg-tab" data-compare-mode="health">Health Insurance</button>
+      <div class="type-strip-wrap">
+        <div class="type-strip-label">Insurance type</div>
+        <div class="type-strip" id="typeStrip" role="tablist" aria-label="Insurance type"></div>
       </div>
 
       <!-- ---- Life insurance: graded, filter-driven comparison ---- -->
@@ -653,12 +730,18 @@
         </div>
       </div>
 
-      <!-- ---- General insurance: document-diff comparison ---- -->
+      <!-- ---- General/health/etc: provider gallery + scoped diff table ----
+           One panel handles all 9 non-life types (house, contents, car, pet,
+           health, travel, landlord, business, boat) since they all share the
+           same GeneralInsuranceFact shape via /api/v1/compare/general - see
+           08-UI-DESIGN.md redesign notes. Life keeps its own panel above
+           (medically underwritten, genuinely different UI). -->
       <div class="compare-panel" id="compare-general">
         <div class="section-head" style="margin-top:0">
-          <h2 id="general-heading">Home &amp; Contents insurance</h2>
+          <h2 id="general-heading">House insurance</h2>
           <span class="pill neutral" id="general-data-source-pill">Loading…</span>
         </div>
+        <p class="surface-sub" id="general-count-sub"></p>
         <div class="grade-board" id="compare-general-loading" style="display:none">
           <div class="card skeleton-card">
             <div class="skeleton skeleton-line" style="width:60%;height:16px"></div>
@@ -675,39 +758,29 @@
           <button class="btn-ghost" id="btn-retry-general">Retry</button>
         </div>
         <div id="compare-general-loaded">
-          <div class="table-wrap">
-            <table id="general-table"></table>
+          <div class="empty-state" id="general-empty-state" style="display:none"></div>
+          <div id="general-populated">
+            <p class="surface-sub" style="margin-top:-8px">Tap a card to add or remove it from the comparison below.</p>
+            <div class="gallery" id="general-gallery"></div>
+            <div class="compare-toolbar">
+              <div class="selected-count" id="general-selected-count"></div>
+              <div class="toolbar-actions">
+                <div class="toggle-row" id="general-diff-toggle"><div class="toggle" id="general-diff-switch"></div> Only show differences</div>
+                <button class="btn-ghost" id="btn-select-all-general" type="button">Select all</button>
+              </div>
+            </div>
+            <div class="table-wrap" id="general-table-wrap" style="display:none">
+              <table id="general-table"></table>
+            </div>
+            <div class="empty-state" id="general-pick-more" style="display:none">Select at least 2 insurers above to see a side-by-side comparison.</div>
+            <div class="legend" id="general-legend" style="display:none">
+              <span><i style="background:var(--amber-soft);box-shadow:inset 0 0 0 1px var(--amber)"></i> Insurers disagree or one is silent</span>
+              <span><i style="background:var(--teal-soft)"></i> Limit</span>
+              <span><i style="background:var(--slate-soft)"></i> Benefit</span>
+              <span><i style="background:var(--brick-soft)"></i> Exclusion</span>
+            </div>
           </div>
-          <p class="grade-footnote">Rows group real extracted facts by topic (retaining walls, temporary accommodation, specified-item sub-limits, exclusions) — insurers with no matching fact for a topic show "not found", never a guess. Loaded live from <code class="mono">/api/v1/compare/general</code>.</p>
-        </div>
-      </div>
-
-      <!-- ---- Health insurance: document-diff comparison ---- -->
-      <div class="compare-panel" id="compare-health">
-        <div class="section-head" style="margin-top:0">
-          <h2 id="health-heading">Health insurance</h2>
-          <span class="pill neutral" id="health-data-source-pill">Loading…</span>
-        </div>
-        <div class="grade-board" id="compare-health-loading" style="display:none">
-          <div class="card skeleton-card">
-            <div class="skeleton skeleton-line" style="width:60%;height:16px"></div>
-            <div class="skeleton skeleton-line" style="width:90%"></div>
-            <div class="skeleton skeleton-line" style="width:75%"></div>
-          </div>
-        </div>
-        <div class="card error-card" id="compare-health-error" style="display:none">
-          <span class="ic">⚠</span>
-          <div class="msg">
-            <b>Couldn't load comparison</b>
-            The comparison service didn't respond. Retry when ready.
-          </div>
-          <button class="btn-ghost" id="btn-retry-health">Retry</button>
-        </div>
-        <div id="compare-health-loaded">
-          <div class="table-wrap">
-            <table id="health-table"></table>
-          </div>
-          <p class="grade-footnote">Rows group real extracted facts by topic (benefit limits, exclusions) — insurers with no matching fact for a topic show "not found", never a guess. Loaded live from <code class="mono">/api/v1/compare/general</code>.</p>
+          <p class="grade-footnote">Rows group real extracted facts by topic across all insurance types — insurers with no matching fact for a topic show "not found", never a guess. Loaded live from <code class="mono">/api/v1/compare/general</code>.</p>
         </div>
       </div>
     </section>
@@ -760,17 +833,6 @@
   }
   btnLight.addEventListener('click', () => setTheme('light'));
   btnDark.addEventListener('click', () => setTheme('dark'));
-
-  const segTabs = document.querySelectorAll('.seg-tab');
-  segTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const mode = tab.dataset.compareMode;
-      segTabs.forEach(t => t.classList.toggle('on', t === tab));
-      document.getElementById('compare-life').classList.toggle('active', mode === 'life');
-      document.getElementById('compare-general').classList.toggle('active', mode === 'general');
-      document.getElementById('compare-health').classList.toggle('active', mode === 'health');
-    });
-  });
 
   /* ---- Auth: login / SSO callback / sign-out (see 10-AUTH-AND-ACCOUNTS.md) ----
      Demo only — no real request is made for the password path or the callback transition;
@@ -929,7 +991,26 @@
     fetchLifeComparison();
   });
 
-  /* ---- Compare > General Insurance: loading / error / loaded states ---- */
+  /* ---- Compare > everything except Life: type strip, provider gallery,
+     scoped diff table. One panel drives all 9 remaining types (house,
+     contents, car, pet, health, travel, landlord, business, boat) via the
+     same generic /api/v1/compare/general endpoint - see the Compare
+     redesign notes (08-UI-DESIGN.md). Replaces the old fixed 3-tab switch,
+     which only ever rendered house/contents and had no way to reach the
+     other 7 real, already-ingested types at all. ---- */
+  const TYPE_ORDER = [
+    ['life', 'Life'], ['house', 'House'], ['contents', 'Contents'], ['car', 'Car'],
+    ['landlord', 'Landlord'], ['pet', 'Pet'], ['health', 'Health'], ['travel', 'Travel'],
+    ['boat', 'Boat'], ['business', 'Business'],
+  ];
+  const TYPE_LABELS = Object.fromEntries(TYPE_ORDER);
+
+  let activeType = 'life';
+  let typeCounts = {};
+  const generalCache = {};   // type -> merged results[], fetched once per type (lazy)
+  const selectedInsurers = {}; // type -> Set of insurer names currently in the diff table
+  const onlyDiff = {};         // type -> bool, "only show differences" toggle state
+
   const generalBlocks = {
     loading: document.getElementById('compare-general-loading'),
     error: document.getElementById('compare-general-error'),
@@ -940,7 +1021,7 @@
       el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
     });
   }
-  document.getElementById('btn-retry-general').addEventListener('click', () => fetchGeneralComparison());
+  document.getElementById('btn-retry-general').addEventListener('click', () => fetchGeneralComparisonFor(activeType));
 
   const generalDataSourcePill = document.getElementById('general-data-source-pill');
   function setGeneralDataSource(source) {
@@ -951,48 +1032,84 @@
     generalDataSourcePill.classList.toggle('neutral', source !== 'extracted_verified');
   }
 
-  // Groups heterogeneous real facts (each insurer extracted its own set - AMI's "Walls,
-  // including garden and retaining walls" benefit vs Tower's "Garden retaining walls (total)"
-  // $25,000 limit aren't the same shape) into aligned rows by topic keyword, so genuinely
-  // comparable facts land in the same row without fabricating a shared schema across insurers.
-  // A fact that matches no topic still isn't lost - it gets its own single-insurer row.
-  const GENERAL_TOPICS = [
-    { label: 'Retaining walls', match: /retaining wall/i },
-    { label: 'Temporary / alternative accommodation', match: /temporary accommodation|alternative accommodation/i },
-    { label: 'Jewellery / watches', match: /jewellery/i },
-    { label: 'Cameras', match: /camera/i },
-    { label: 'Watercraft', match: /watercraft/i },
-    { label: 'Money / negotiable documents', match: /money|negotiable/i },
-    { label: 'Vermin / pest exclusion', match: /vermin|insects|rodents/i },
-    { label: 'Structural alteration exclusion', match: /structural addition|structural alteration/i },
-  ];
-
   function escapeHtmlGeneral(str) {
     const div = document.createElement('div');
     div.textContent = String(str ?? '');
     return div.innerHTML;
   }
 
-  function renderGeneralTable(results) {
-    const table = document.getElementById('general-table');
-    if (!results || results.length === 0) {
-      table.innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-faint)">No general insurance data available yet.</td></tr></tbody>';
-      return;
-    }
-    const insurers = results.map(r => r.insurer);
-    const usedFactIndex = results.map(() => new Set());
+  // Groups heterogeneous real facts (each insurer extracted its own set - AMI's "Walls,
+  // including garden and retaining walls" benefit vs Tower's "Garden retaining walls (total)"
+  // $25,000 limit aren't the same shape) into aligned rows by topic keyword, so genuinely
+  // comparable facts land in the same row without fabricating a shared schema across insurers.
+  // A fact that matches no topic still isn't lost - it gets its own exact-name leftover row.
+  // Generalised from the two type-specific lists this replaced (the old GENERAL_TOPICS only
+  // covered house/contents, HEALTH_TOPICS only health - car/pet/landlord/travel/boat/business
+  // facts never matched either one, since no UI ever fetched those types at all).
+  const TOPIC_RULES = [
+    ['Legal / liability protection', /liability/i],
+    ['Excess', /\bexcess\b/i],
+    ['Windscreen / glass', /windscreen|glass breakage/i],
+    ['Tyres', /\btyre/i],
+    ['Mechanical / electrical / electronic breakdown', /mechanical|electrical|electronic.*(breakdown|failure|damage)/i],
+    ['Water damage (hidden / gradual)', /hidden.*water|gradual.*water|water damage/i],
+    ['Retaining walls', /retaining wall/i],
+    ['Temporary accommodation / transport', /temporary accommodation|alternative accommodation|temporary transport|accommodation and travel/i],
+    ['Keys and locks', /keys and locks/i],
+    ['Methamphetamine contamination', /methamphetamine/i],
+    ['Jewellery / watches', /jewellery/i],
+    ['Cameras', /camera/i],
+    ['Watercraft', /watercraft/i],
+    ['Money / negotiable documents', /money|negotiable/i],
+    ['Vermin / pest exclusion', /vermin|insects|rodents/i],
+    ['Structural alteration exclusion', /structural addition|structural alteration/i],
+    ['Alcohol / drugs exclusion', /alcohol|breath.*(blood|test)/i],
+    ['Defect / faulty design exclusion', /\bdefect\b|faulty design|faulty work/i],
+    ['Wear, tear & gradual deterioration', /wear and tear|gradual deterioration|rot or mildew|rot,? mould/i],
+    ['Intentional / malicious acts exclusion', /intentional|malicious|deliberate/i],
+    ['Roadside assistance', /roadside/i],
+    ['New vehicle replacement', /new vehicle replacement/i],
+    ['Death benefit', /death benefit|accidental death/i],
+    ['Storm / flood restriction', /48 hour|48-hour restriction/i],
+    // Deliberately does NOT match on the bare word "congenital" - AIA also has an
+    // unrelated "Congenital Conditions Surgery Benefit" (hernia/undescended testes
+    // surgery cover, nothing to do with the rare-disease exclusion below) that would
+    // otherwise be wrongly grouped into this row.
+    ['Home nursing / home care', /home (nursing|care)/i],
+    ['Congenital / chronic conditions exclusion', /chronic condition|specified condition|genetic, or hereditary|cystic fibrosis|marfan|kyphosis|scoliosis/i],
+    ['Gastric banding / bariatric / weight loss', /gastric|bariatric|weight loss/i],
+    ['Pre-existing conditions exclusion', /pre-existing/i],
+    ['Cosmetic exclusion', /cosmetic/i],
+    ['Cancer treatment', /cancer|chemotherapy/i],
+    ['Physiotherapy', /physiotherapy/i],
+    ['Surgical benefit', /surgical (procedures|benefit)|^surgery$/i],
+    ['Diagnostic imaging & tests', /diagnostic|imaging|ct, mri/i],
+    ['Bereavement / funeral support', /bereavement|funeral/i],
+    ['Sterilisation', /sterilisation/i],
+    ['Obstetrics', /obstetric/i],
+    ['Ambulance', /ambulance/i],
+    ['Minor surgery', /minor surgery/i],
+    ['Skin lesion', /skin lesion/i],
+  ];
+  function topicForFact(fact) {
+    for (const [label, re] of TOPIC_RULES) if (re.test(fact.name)) return label;
+    return null;
+  }
 
-    const rows = [];
-    for (const topic of GENERAL_TOPICS) {
-      const cells = results.map((r, i) => {
-        const idx = r.facts.findIndex((f, fi) => !usedFactIndex[i].has(fi) && topic.match.test(f.name));
-        if (idx === -1) return null;
-        usedFactIndex[i].add(idx);
-        return r.facts[idx];
+  function buildGeneralRows(results) {
+    const usedIdx = results.map(() => new Set());
+    const byTopic = new Map();
+    results.forEach((r, i) => {
+      r.facts.forEach((f, fi) => {
+        const topic = topicForFact(f);
+        if (!topic) return;
+        if (!byTopic.has(topic)) byTopic.set(topic, results.map(() => null));
+        byTopic.get(topic)[i] = f;
+        usedIdx[i].add(fi);
       });
-      if (cells.every(c => c === null)) continue;
-      rows.push({ label: topic.label, cells });
-    }
+    });
+    const rows = [];
+    byTopic.forEach((cells, label) => rows.push({ label, cells }));
     // Leftover facts that matched no topic - grouped by exact name match across insurers
     // (e.g. AMI and State share the same underwriter's template, so identically-named
     // facts merge into one row instead of two near-duplicate single-insurer rows), still
@@ -1000,38 +1117,138 @@
     const leftoverByName = new Map();
     results.forEach((r, i) => {
       r.facts.forEach((f, fi) => {
-        if (usedFactIndex[i].has(fi)) return;
+        if (usedIdx[i].has(fi)) return;
         if (!leftoverByName.has(f.name)) leftoverByName.set(f.name, results.map(() => null));
         leftoverByName.get(f.name)[i] = f;
       });
     });
     leftoverByName.forEach((cells, label) => rows.push({ label, cells }));
-
-    const theadHtml = `<tr><th style="width:22%">Attribute</th>${insurers.map(name => `<th>${escapeHtmlGeneral(name)}</th>`).join('')}</tr>`;
-    const tbodyHtml = rows.map(row => {
-      const cellsHtml = row.cells.map(f => {
-        if (!f) return '<td class="compare-cell-missing">Not found</td>';
-        const value = f.category === 'exclusion' ? `Excluded — ${f.name}` : (f.detail || f.name);
-        const locRef = f.source ? `<span class="loc-ref">p.${f.source.page} · ${escapeHtmlGeneral(f.source.document)}</span>` : '';
-        return `<td>${escapeHtmlGeneral(value)}${locRef}</td>`;
-      }).join('');
-      return `<tr><td>${escapeHtmlGeneral(row.label)}</td>${cellsHtml}</tr>`;
-    }).join('');
-
-    table.innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
+    return rows;
   }
 
-  // House and Contents are genuinely separate products for most insurers
-  // (Tower/Vero publish two distinct wordings) - "home_contents" only
-  // remains as the DB-internal type for insurers whose one real document
-  // genuinely bundles both (AMI/State). Fetches all three and merges by
-  // insurer so a Tower (house+contents) row and an AMI (home_contents) row
-  // land in the same table without forcing an inaccurate schema on either.
-  async function fetchGeneralComparison() {
+  function generalFactCell(f) {
+    if (!f) return '<td class="compare-cell-missing">Not found</td>';
+    const isMoney = f.category === 'limit' && f.detail;
+    const value = f.category === 'exclusion' ? f.name : (f.detail || f.name);
+    const locRef = f.source ? `<span class="loc-ref">p.${f.source.page} · ${escapeHtmlGeneral(f.source.document)}</span>` : '';
+    return `<td><span class="cat-pill ${f.category}">${f.category}</span><div class="cell-value${isMoney ? ' mono-val' : ''}">${escapeHtmlGeneral(value)}</div>${locRef}</td>`;
+  }
+
+  function ensureSelection(type, results) {
+    if (!selectedInsurers[type]) {
+      selectedInsurers[type] = new Set(results.map(r => r.insurer).slice(0, Math.min(4, results.length)));
+    }
+    if (onlyDiff[type] === undefined) onlyDiff[type] = false;
+  }
+
+  function renderGeneralGallery(type, results) {
+    const gallery = document.getElementById('general-gallery');
+    gallery.innerHTML = results.map(r => {
+      const isSel = selectedInsurers[type].has(r.insurer);
+      const headline = r.facts.slice(0, 3).map(f => {
+        const label = escapeHtmlGeneral(f.category === 'exclusion' ? 'Excludes' : f.name.split('(')[0].trim().slice(0, 26));
+        const val = escapeHtmlGeneral(f.category === 'limit' ? (f.detail || '') : (f.category === 'exclusion' ? '—' : 'incl.'));
+        return `<div class="fact-row"><span>${label}</span><b>${val}</b></div>`;
+      }).join('');
+      return `<div class="prov-card${isSel ? ' selected' : ''}" data-insurer="${escapeHtmlGeneral(r.insurer)}">
+        <div class="prov-card-top"><div class="prov-name">${escapeHtmlGeneral(r.insurer)}</div><div class="prov-check">✓</div></div>
+        <div class="prov-facts">${headline}</div>
+        <div class="prov-meta"><span>${escapeHtmlGeneral(formatProductName(r.product_name))}</span><span class="prov-count">${r.facts.length} facts</span></div>
+      </div>`;
+    }).join('');
+    gallery.querySelectorAll('.prov-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const name = card.dataset.insurer;
+        if (selectedInsurers[type].has(name)) selectedInsurers[type].delete(name); else selectedInsurers[type].add(name);
+        renderGeneralComparisonSurface(type, results);
+      });
+    });
+  }
+
+  function renderGeneralComparisonSurface(type, results) {
+    ensureSelection(type, results);
+    renderGeneralGallery(type, results);
+
+    const n = selectedInsurers[type].size;
+    document.getElementById('general-selected-count').innerHTML = `Comparing <b>${n}</b> of ${results.length} insurers`;
+    document.getElementById('general-diff-switch').classList.toggle('on', onlyDiff[type]);
+
+    const chosen = results.filter(r => selectedInsurers[type].has(r.insurer));
+    const tableWrap = document.getElementById('general-table-wrap');
+    const pickMore = document.getElementById('general-pick-more');
+    const legend = document.getElementById('general-legend');
+
+    if (chosen.length < 2) {
+      tableWrap.style.display = 'none';
+      legend.style.display = 'none';
+      pickMore.style.display = 'block';
+      return;
+    }
+    pickMore.style.display = 'none';
+    tableWrap.style.display = 'block';
+    legend.style.display = 'flex';
+
+    let rows = buildGeneralRows(chosen);
+    if (onlyDiff[type]) {
+      rows = rows.filter(row => {
+        const present = row.cells.filter(c => c !== null);
+        if (present.length === 0) return false;
+        const vals = new Set(present.map(f => f.detail || f.name));
+        return vals.size > 1 || present.length < chosen.length;
+      });
+    }
+    const theadHtml = `<tr><th style="min-width:180px">Attribute</th>${chosen.map(r => `<th>${escapeHtmlGeneral(r.insurer)}</th>`).join('')}</tr>`;
+    const tbodyHtml = rows.map(row => {
+      const present = row.cells.filter(c => c);
+      const vals = new Set(present.map(f => f.detail || f.name));
+      const isDiff = present.length > 0 && (vals.size > 1 || present.length < chosen.length);
+      const cellsHtml = row.cells.map(f => {
+        const td = generalFactCell(f);
+        return isDiff ? td.replace('<td', '<td class="compare-cell-diff"') : td;
+      }).join('');
+      return `<tr><td class="row-label">${escapeHtmlGeneral(row.label)}</td>${cellsHtml}</tr>`;
+    }).join('');
+    document.getElementById('general-table').innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
+  }
+
+  document.getElementById('general-diff-toggle').addEventListener('click', () => {
+    onlyDiff[activeType] = !onlyDiff[activeType];
+    renderGeneralComparisonSurface(activeType, generalCache[activeType]);
+  });
+  document.getElementById('btn-select-all-general').addEventListener('click', () => {
+    selectedInsurers[activeType] = new Set(generalCache[activeType].map(r => r.insurer));
+    renderGeneralComparisonSurface(activeType, generalCache[activeType]);
+  });
+
+  function renderGeneralPanel(type, results) {
+    document.getElementById('general-count-sub').textContent = `${results.length} of 27 catalogued insurers ingested`;
+    if (!results || results.length === 0) {
+      document.getElementById('general-empty-state').textContent = `No ${TYPE_LABELS[type].toLowerCase()} insurance data available yet.`;
+      document.getElementById('general-empty-state').style.display = 'block';
+      document.getElementById('general-populated').style.display = 'none';
+      return;
+    }
+    document.getElementById('general-empty-state').style.display = 'none';
+    document.getElementById('general-populated').style.display = 'block';
+    renderGeneralComparisonSurface(type, results);
+  }
+
+  // House/Contents also fold in the DB-internal "home_contents" type (AMI/
+  // State's one genuinely-combined document) so a Tower (house+contents) row
+  // and an AMI (home_contents) row land in the same table without forcing an
+  // inaccurate schema on either - same merge this always did, just now
+  // reachable for every type via the type strip instead of hardcoded to run
+  // unconditionally on load.
+  async function fetchGeneralComparisonFor(type) {
+    document.getElementById('general-heading').textContent = TYPE_LABELS[type] + ' insurance';
+    if (generalCache[type]) {
+      renderGeneralPanel(type, generalCache[type]);
+      return;
+    }
     setGeneralCompareState('loading');
     try {
-      const types = ['house', 'contents', 'home_contents'];
-      const responses = await Promise.all(types.map(product_type =>
+      const productTypes = (type === 'house' || type === 'contents') ? [type, 'home_contents'] : [type];
+      const responses = await Promise.all(productTypes.map(product_type =>
         fetch(`${API_BASE}/api/v1/compare/general`, {
           method: 'POST',
           credentials: 'include',
@@ -1049,154 +1266,64 @@
       for (const data of datas) {
         dataSource = data.data_source;
         for (const r of data.results) {
-          if (!byInsurer.has(r.insurer)) byInsurer.set(r.insurer, { insurer: r.insurer, facts: [] });
+          if (!byInsurer.has(r.insurer)) byInsurer.set(r.insurer, { insurer: r.insurer, product_name: r.product_name, facts: [] });
           byInsurer.get(r.insurer).facts.push(...r.facts);
         }
       }
+      const results = [...byInsurer.values()];
+      generalCache[type] = results;
       setGeneralDataSource(dataSource);
-      renderGeneralTable([...byInsurer.values()]);
+      renderGeneralPanel(type, results);
       setGeneralCompareState('loaded');
     } catch (err) {
       setGeneralCompareState('error');
     }
   }
 
-  /* ---- Compare > Health Insurance: loading / error / loaded states ---- */
-  const healthBlocks = {
-    loading: document.getElementById('compare-health-loading'),
-    error: document.getElementById('compare-health-error'),
-    loaded: document.getElementById('compare-health-loaded'),
-  };
-  function setHealthCompareState(state) {
-    Object.entries(healthBlocks).forEach(([key, el]) => {
-      el.style.display = key === state ? (key === 'loaded' ? 'block' : (key === 'error' ? 'flex' : 'grid')) : 'none';
-    });
-  }
-  document.getElementById('btn-retry-health').addEventListener('click', () => fetchHealthComparison());
-
-  const healthDataSourcePill = document.getElementById('health-data-source-pill');
-  function setHealthDataSource(source) {
-    healthDataSourcePill.textContent = source === 'extracted_verified'
-      ? 'Live, citation-verified data'
-      : 'Unknown data source';
-    healthDataSourcePill.classList.toggle('ok', source === 'extracted_verified');
-    healthDataSourcePill.classList.toggle('neutral', source !== 'extracted_verified');
-  }
-
-  // Same topic-keyword grouping approach as GENERAL_TOPICS above, tuned to the
-  // real facts extracted so far across Southern Cross (UltraCare), nib
-  // (Premium Hospital), AIA (Private Health), and UniMed (Hospital Select) -
-  // e.g. all four exclude/cover the same rare congenital conditions (cystic
-  // fibrosis, Marfan's, kyphosis), and SC's "Gastric banding or bypass
-  // allowance" benefit lines up meaningfully against nib's "weight loss or
-  // bariatric" exclusion (a benefit vs. an exclusion is itself the real,
-  // useful comparison signal, not a data mismatch).
-  const HEALTH_TOPICS = [
-    { label: 'Home nursing / home care', match: /home (nursing|care)/i },
-    // Deliberately does NOT match on the bare word "congenital" - AIA also has an
-    // unrelated "Congenital Conditions Surgery Benefit" (hernia/undescended testes
-    // surgery cover, nothing to do with the rare-disease exclusion below) that would
-    // otherwise be wrongly grouped into this row.
-    { label: 'Congenital / chronic conditions exclusion', match: /chronic condition|specified condition|genetic, or hereditary|cystic fibrosis|marfan|kyphosis|scoliosis/i },
-    { label: 'Gastric banding / bariatric / weight loss', match: /gastric|bariatric|weight loss/i },
-    { label: 'Pre-existing conditions exclusion', match: /pre-existing/i },
-    { label: 'Cosmetic exclusion', match: /cosmetic/i },
-    { label: 'Cancer treatment', match: /cancer|chemotherapy/i },
-    { label: 'Physiotherapy', match: /physiotherapy/i },
-    { label: 'Surgical benefit', match: /surgical (procedures|benefit)|^surgery$/i },
-    { label: 'Diagnostic imaging & tests', match: /diagnostic|imaging|ct, mri/i },
-    { label: 'Bereavement / funeral support', match: /bereavement|funeral/i },
-    { label: 'Sterilisation', match: /sterilisation/i },
-    { label: 'Obstetrics', match: /obstetric/i },
-    { label: 'Ambulance', match: /ambulance/i },
-    { label: 'Minor surgery', match: /minor surgery/i },
-    { label: 'Skin lesion', match: /skin lesion/i },
-  ];
-
-  function escapeHtmlHealth(str) {
-    const div = document.createElement('div');
-    div.textContent = String(str ?? '');
-    return div.innerHTML;
-  }
-
-  function renderHealthTable(results) {
-    const table = document.getElementById('health-table');
-    if (!results || results.length === 0) {
-      table.innerHTML = '<tbody><tr><td style="padding:16px;color:var(--text-faint)">No health insurance data available yet.</td></tr></tbody>';
-      return;
-    }
-    const insurers = results.map(r => r.insurer);
-    const usedFactIndex = results.map(() => new Set());
-
-    const rows = [];
-    for (const topic of HEALTH_TOPICS) {
-      const cells = results.map((r, i) => {
-        const idx = r.facts.findIndex((f, fi) => !usedFactIndex[i].has(fi) && topic.match.test(f.name));
-        if (idx === -1) return null;
-        usedFactIndex[i].add(idx);
-        return r.facts[idx];
-      });
-      if (cells.every(c => c === null)) continue;
-      rows.push({ label: topic.label, cells });
-    }
-    const leftoverByName = new Map();
-    results.forEach((r, i) => {
-      r.facts.forEach((f, fi) => {
-        if (usedFactIndex[i].has(fi)) return;
-        if (!leftoverByName.has(f.name)) leftoverByName.set(f.name, results.map(() => null));
-        leftoverByName.get(f.name)[i] = f;
-      });
-    });
-    leftoverByName.forEach((cells, label) => rows.push({ label, cells }));
-
-    const theadHtml = `<tr><th style="width:22%">Attribute</th>${insurers.map(name => `<th>${escapeHtmlHealth(name)}</th>`).join('')}</tr>`;
-    const tbodyHtml = rows.map(row => {
-      const cellsHtml = row.cells.map(f => {
-        if (!f) return '<td class="compare-cell-missing">Not found</td>';
-        const value = f.category === 'exclusion' ? `Excluded — ${f.name}` : (f.detail || f.name);
-        const locRef = f.source ? `<span class="loc-ref">p.${f.source.page} · ${escapeHtmlHealth(f.source.document)}</span>` : '';
-        return `<td>${escapeHtmlHealth(value)}${locRef}</td>`;
-      }).join('');
-      return `<tr><td>${escapeHtmlHealth(row.label)}</td>${cellsHtml}</tr>`;
+  function renderTypeStrip() {
+    const el = document.getElementById('typeStrip');
+    el.innerHTML = TYPE_ORDER.map(([key, label]) => {
+      const n = typeCounts[key] ?? '';
+      const cls = ['type-pill'];
+      if (key === activeType) cls.push('on');
+      if (key !== 'life' && typeCounts[key] === 0) cls.push('zero');
+      return `<button class="${cls.join(' ')}" data-type="${key}">${label}<span class="n">${n}</span></button>`;
     }).join('');
-
-    table.innerHTML = `<thead>${theadHtml}</thead><tbody>${tbodyHtml}</tbody>`;
-  }
-
-  async function fetchHealthComparison() {
-    setHealthCompareState('loading');
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/compare/general`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_type: 'health' }),
-      });
-      if (res.status === 401) { showLogin(); return; }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setHealthDataSource(data.data_source);
-      renderHealthTable(data.results);
-      setHealthCompareState('loaded');
-    } catch (err) {
-      setHealthCompareState('error');
-    }
-  }
-
-  let generalFetchedOnce = false;
-  let healthFetchedOnce = false;
-  segTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      if (tab.dataset.compareMode === 'general' && !generalFetchedOnce) {
-        generalFetchedOnce = true;
-        fetchGeneralComparison();
-      }
-      if (tab.dataset.compareMode === 'health' && !healthFetchedOnce) {
-        healthFetchedOnce = true;
-        fetchHealthComparison();
-      }
+    el.querySelectorAll('.type-pill').forEach(btn => {
+      btn.addEventListener('click', () => selectType(btn.dataset.type));
     });
-  });
+  }
+
+  function selectType(key) {
+    if (key === activeType) return;
+    activeType = key;
+    renderTypeStrip();
+    document.getElementById('compare-life').classList.toggle('active', key === 'life');
+    document.getElementById('compare-general').classList.toggle('active', key !== 'life');
+    if (key !== 'life') fetchGeneralComparisonFor(key);
+  }
+
+  // Type-strip counts reuse the same coverage data as the Insurers view
+  // (one call, PRODUCT_TYPE_ORDER is defined below) rather than fetching
+  // /compare/general for all 9 types up front just to show a number.
+  async function fetchTypeCounts() {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/insurers/coverage`, { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const counts = {};
+      data.results.forEach(r => {
+        r.types.forEach(t => { if (t.covered) counts[t.product_type] = (counts[t.product_type] || 0) + 1; });
+      });
+      typeCounts = {
+        life: counts.life_cover || 0, house: counts.house || 0, contents: counts.contents || 0,
+        car: counts.car || 0, landlord: counts.landlord || 0, pet: counts.pet || 0,
+        health: counts.health || 0, travel: counts.travel || 0, boat: counts.boat || 0,
+        business: counts.business || 0,
+      };
+      renderTypeStrip();
+    } catch (err) { /* strip just shows blank counts, not fatal */ }
+  }
 
   /* ---- Insurers: real NZ market coverage tracker ---- */
   const insurersBlocks = {
@@ -1275,7 +1402,9 @@
   // screen can't check anything real — land straight on Compare with real, live data.
   showApp();
   navigate('compare');
+  renderTypeStrip();
   fetchLifeComparison();
+  fetchTypeCounts();
 </script>
 </body>
 </html>
