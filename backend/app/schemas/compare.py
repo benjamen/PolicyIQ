@@ -40,6 +40,13 @@ class CriterionOut(BaseModel):
     source: SourceRefOut | None
 
 
+class GeneralInsuranceFactOut(BaseModel):
+    category: str
+    name: str
+    detail: str | None
+    source: SourceRefOut | None
+
+
 class GradeReportOut(BaseModel):
     insurer: str
     product_name: str
@@ -49,19 +56,16 @@ class GradeReportOut(BaseModel):
     overall_score: float | None
     data_completeness: float
     criteria: dict[str, CriterionOut]
+    # Not a scored criterion - informational, same shape as general
+    # insurance's exclusions (see ProductProfile.exclusions' docstring for
+    # why no new storage mechanism was needed for these).
+    exclusions: list[GeneralInsuranceFactOut] = []
 
 
 class CompareResponse(BaseModel):
     filters: CompareRequest
     results: list[GradeReportOut]
     data_source: DataSource
-
-
-class GeneralInsuranceFactOut(BaseModel):
-    category: str
-    name: str
-    detail: str | None
-    source: SourceRefOut | None
 
 
 class GeneralProductProfileOut(BaseModel):

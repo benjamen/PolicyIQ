@@ -479,6 +479,11 @@
   .exclusions-gap p {
     font-size: 11.5px; color: var(--text-faint); line-height: 1.55; margin: 0; font-style: italic;
   }
+  .exclusion-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 2px; }
+  .exclusion-item { font-size: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .exclusion-item:first-child { padding-top: 0; border-top: none; }
+  .exclusion-item span { color: var(--text); line-height: 1.45; display: block; }
+  .exclusion-count { font-size: 11px; color: var(--text-faint); font-weight: 600; }
 
   .grade-footnote { margin: 18px 2px 0; font-size: 12px; color: var(--text-faint); max-width: 68ch; line-height: 1.6; }
 
@@ -1022,6 +1027,32 @@
     return String(name || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
 
+  // Shared by the card view and the detailed report table - exclusions
+  // aren't a scored criterion (grading.py has no weight for them), so
+  // they're rendered as a flat, uncapped list rather than another
+  // criterion row. Real content, not truncated: some insurers (e.g.
+  // Partners Life) have 15+ real exclusion facts once every brochure/
+  // wording/FAQ document is accounted for.
+  function renderExclusionsBlock(r) {
+    const exclusions = r.exclusions || [];
+    if (exclusions.length === 0) {
+      return `<div class="exclusions-gap">
+        <div class="criterion-group-label">Exclusions &amp; waiting periods</div>
+        <p>No structured exclusion facts extracted yet for ${escapeHtml(r.insurer)}'s life products.</p>
+      </div>`;
+    }
+    const itemsHtml = exclusions.map(exc => {
+      const cite = (exc.source && exc.source.document_id)
+        ? `<button type="button" class="loc-ref" data-doc-id="${escapeHtml(exc.source.document_id)}" data-page="${exc.source.page}" data-label="${escapeHtml('p.' + exc.source.page + ' · ' + exc.source.document)}">p.${exc.source.page} · view source</button>`
+        : '';
+      return `<div class="exclusion-item"><span>${escapeHtml(exc.name)}</span>${cite}</div>`;
+    }).join('');
+    return `<div class="exclusions-gap">
+      <div class="criterion-group-label">Exclusions &amp; waiting periods <span class="exclusion-count">(${exclusions.length})</span></div>
+      <div class="exclusion-list">${itemsHtml}</div>
+    </div>`;
+  }
+
   function renderGradeBoard(results) {
     const board = document.getElementById('grade-board');
     if (!results || results.length === 0) {
@@ -1067,10 +1098,7 @@
           </div>
         </div>
         <div class="criteria-list">${criteriaHtml}</div>
-        <div class="exclusions-gap">
-          <div class="criterion-group-label">Exclusions &amp; waiting periods</div>
-          <p>Not yet extracted for ${escapeHtml(r.insurer)} — this project doesn't have a structured exclusions dataset for life products yet (real exclusion data already exists for house/car/pet etc. — see the Compare type strip).</p>
-        </div>
+        ${renderExclusionsBlock(r)}
       </div>`;
     }).join('');
   }
@@ -1124,10 +1152,22 @@
       ),
     ].join('')).join('');
 
+    // One row per insurer's own exclusion list, not aligned fact-by-fact
+    // like the criteria rows above - each insurer's exclusions are its own
+    // free-form clause set, not topically comparable the way general
+    // insurance's benefit/limit facts are.
     const exclusionsRow = `<tr><td class="row-label" colspan="${results.length + 1}" style="background:var(--paper);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);font-weight:700">Exclusions &amp; waiting periods</td></tr>
-      <tr><td class="row-label">Structured exclusions data</td>${results.map(r =>
-        `<td class="compare-cell-missing">Not yet extracted for ${escapeHtml(r.insurer)}</td>`
-      ).join('')}</tr>`;
+      <tr><td class="row-label">Exclusions</td>${results.map(r => {
+        const exclusions = r.exclusions || [];
+        if (exclusions.length === 0) return `<td class="compare-cell-missing">None extracted yet</td>`;
+        const itemsHtml = exclusions.map(exc => {
+          const cite = (exc.source && exc.source.document_id)
+            ? `<button type="button" class="loc-ref" data-doc-id="${escapeHtml(exc.source.document_id)}" data-page="${exc.source.page}" data-label="${escapeHtml('p.' + exc.source.page + ' · ' + exc.source.document)}">p.${exc.source.page} · view source</button>`
+            : '';
+          return `<div class="exclusion-item"><span>${escapeHtml(exc.name)}</span>${cite}</div>`;
+        }).join('');
+        return `<td><div class="exclusion-count" style="margin-bottom:6px">${exclusions.length} extracted</div><div class="exclusion-list">${itemsHtml}</div></td>`;
+      }).join('')}</tr>`;
 
     const theadHtml = `<tr><th style="min-width:170px">Attribute</th>${results.map(r => `<th>${escapeHtml(r.insurer)}</th>`).join('')}</tr>`;
     table.innerHTML = `<thead>${theadHtml}</thead><tbody>${eligibilityRow}${scoreRow}${groupRows}${exclusionsRow}</tbody>`;

@@ -48,6 +48,11 @@ def compare_life_insurance(request: CompareRequest, session: Session = Depends(g
     )
     profiles = load_product_profiles(session, product_type=request.product_type)
     reports = run_compare(profiles, filters)
+    # exclusions live on ProductProfile, not GradeReport - grading.py's
+    # weighted-criteria domain has no business carrying informational,
+    # non-scored facts through it, so they're joined back in here by
+    # policy_version_id instead.
+    profiles_by_id = {p.policy_version_id: p for p in profiles}
 
     results = [
         GradeReportOut(
@@ -67,6 +72,13 @@ def compare_life_insurance(request: CompareRequest, session: Session = Depends(g
                 )
                 for name, c in r.criteria.items()
             },
+            exclusions=[
+                GeneralInsuranceFactOut(
+                    category=exc.category, name=exc.name, detail=exc.detail,
+                    source=SourceRefOut(**exc.source.__dict__) if exc.source else None,
+                )
+                for exc in profiles_by_id[r.policy_version_id].exclusions
+            ],
         )
         for r in reports
     ]

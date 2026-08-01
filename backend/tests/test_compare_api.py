@@ -89,6 +89,17 @@ def _seed_alpha(session: Session, insurer_id) -> None:
             document_id=doc.id, page=page, paragraph_ref=para, confidence=confidence,
         ))
 
+    # Exclusions reuse the generic Exclusion table (section_id-keyed), same
+    # as general insurance - not a GradedFact category (see grading.py's
+    # DEFAULT_WEIGHTS, which has no "exclusions" entry).
+    section = Section(policy_version_id=pv.id, document_id=doc.id, page_start=13, page_end=13)
+    session.add(section)
+    session.flush()
+    session.add(Exclusion(
+        section_id=section.id, description="Death by own hand within 13 months of the start date",
+        page=13, paragraph_ref="6.1", confidence=0.95,
+    ))
+
 
 def _seed_beta(session: Session, insurer_id) -> None:
     product = Product(insurer_id=insurer_id, product_type="life_cover", name="LifeProtect")
@@ -246,6 +257,32 @@ def test_every_criterion_with_a_score_has_a_source_or_is_occupation_restrictions
         for name, criterion in result["criteria"].items():
             if criterion["score"] is not None and name != "occupation_restrictions":
                 assert criterion["source"] is not None, f"{result['insurer']}.{name} scored with no source"
+
+
+def test_exclusions_are_returned_per_insurer_and_never_scored(seeded_client):
+    """Exclusions are informational overlay data (see ProductProfile.
+    exclusions' docstring) - present with real citations when extracted
+    (Alpha), an empty list rather than a missing key when not (Beta/
+    Gamma), and never present as a "exclusions" key inside criteria (that
+    dict is only the 6 weighted GradedFact categories)."""
+    resp = seeded_client.post(
+        "/api/v1/compare/life",
+        json={"age": 35, "smoker_status": "any", "occupation_category": "Professional", "product_type": "life_cover"},
+    )
+    by_insurer = {r["insurer"]: r for r in resp.json()["results"]}
+
+    alpha_exclusions = by_insurer["Insurer Alpha"]["exclusions"]
+    assert len(alpha_exclusions) == 1
+    assert alpha_exclusions[0]["category"] == "exclusion"
+    assert alpha_exclusions[0]["name"] == "Death by own hand within 13 months of the start date"
+    assert alpha_exclusions[0]["source"]["page"] == 13
+    assert alpha_exclusions[0]["source"]["document_id"] is not None
+
+    assert by_insurer["Insurer Beta"]["exclusions"] == []
+    assert by_insurer["Insurer Gamma"]["exclusions"] == []
+
+    for result in resp.json()["results"]:
+        assert "exclusions" not in result["criteria"]
 
 
 def test_missing_data_reflected_in_completeness_not_hidden(seeded_client):

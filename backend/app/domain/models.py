@@ -130,6 +130,15 @@ class ProductProfile:
     waiver_of_premium_source: SourceRef | None = None
     automatic_benefits_count: int | None = None
     automatic_benefits_source: SourceRef | None = None
+    # Not a scored criterion (grading.py's DEFAULT_WEIGHTS has no
+    # "exclusions" entry - these are informational overlay facts, same
+    # shape as general insurance's exclusions, not something that should
+    # move overall_score). Populated from the same generic Exclusion table
+    # every other insurance type already uses (app/db/models.py) - life
+    # policy documents go through the identical build_sections()/
+    # process_section() pipeline, so nothing new was needed to store these,
+    # only to query and expose them.
+    exclusions: tuple["GeneralInsuranceFact", ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)

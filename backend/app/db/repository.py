@@ -94,12 +94,39 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
             select(EligibilityRule).where(EligibilityRule.policy_version_id == policy_version.id)
         ).scalars().all()
 
+        # Exclusions reuse the exact same generic Exclusion table (keyed by
+        # section_id) that house/car/pet etc. already populate - life
+        # policy documents go through the identical build_sections()/
+        # process_section() pipeline, so this is a query addition, not a
+        # new extraction mechanism.
+        sections = session.execute(
+            select(Section).where(Section.policy_version_id == policy_version.id)
+        ).scalars().all()
+        sections_by_id: dict[uuid.UUID, Section] = {s.id: s for s in sections}
+        exclusion_rows = (
+            session.execute(
+                select(Exclusion).where(Exclusion.section_id.in_(sections_by_id.keys()))
+            ).scalars().all()
+            if sections_by_id else []
+        )
+
         document_ids = {f.document_id for f in graded_facts if f.document_id is not None}
         document_ids |= {r.document_id for r in eligibility_rules if r.document_id is not None}
+        document_ids |= {s.document_id for s in sections}
         documents_by_id: dict[uuid.UUID, Document] = {}
         if document_ids:
             for doc in session.execute(select(Document).where(Document.id.in_(document_ids))).scalars():
                 documents_by_id[doc.id] = doc
+
+        exclusions = tuple(
+            GeneralInsuranceFact(
+                category="exclusion",
+                name=exc.description,
+                detail=None,
+                source=_general_source_ref(insurer.name, exc, sections_by_id, documents_by_id),
+            )
+            for exc in exclusion_rows
+        )
 
         general_rule = next((r for r in eligibility_rules if r.occupation_category_id is None), None)
         if general_rule is None:
@@ -245,6 +272,7 @@ def load_product_profiles(session: Session, *, product_type: str) -> list[Produc
                 waiver_of_premium_source=waiver_of_premium_source,
                 automatic_benefits_count=automatic_benefits_count,
                 automatic_benefits_source=automatic_benefits_source,
+                exclusions=exclusions,
             )
         )
 
