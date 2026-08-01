@@ -171,10 +171,19 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
         "1Cover", "https://www.1cover.co.nz", ("travel",),
         "Underwritten by HDI Global Specialty SE's NZ branch.",
     ),
-    # --- Boat/marine specialists ---
-    CatalogEntry("Nautilus Marine Insurance", "https://www.nautilusinsurance.co.nz", ("boat",)),
+    # --- Boat/marine specialist ---
     CatalogEntry(
-        "Nautical Insurance", "https://nautical.co.nz", ("boat",),
-        "An underwriting agency of Vero Insurance New Zealand.",
+        "Nautilus Marine Insurance", "https://www.nautilusinsurance.co.nz", ("boat",),
+        "Real, directly-downloadable policy document, but it's scanned/"
+        "image-based and this project's OCR fallback times out on it "
+        "(120s hard limit) - a local processing limitation, not a source-"
+        "access problem. Not yet ingested.",
     ),
+    # "Nautical Insurance" (nautical.co.nz) was researched and found NOT to
+    # be an independent insurer - its own site states it's "an
+    # underwriting agency of Vero Insurance New Zealand" with no policy
+    # document of its own, same category as the brokers this catalog
+    # already excludes (Gallagher, PIC, Baileys). Vero's real Marine
+    # Pleasurecraft wording is the correct source for boat cover - see the
+    # "boat" type on Vero's own entry above.
 )

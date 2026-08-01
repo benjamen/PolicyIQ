@@ -392,6 +392,9 @@ GENERAL_INSURER_SEED: tuple[InsurerSeed, ...] = (
             known_document_urls=(
                 "https://www.vero.co.nz/documents/personal-insurance/vero-residential-home-policy-0724.pdf",
                 "https://www.vero.co.nz/documents/personal-insurance/vero-residential-contents-policy-0724.pdf",
+                # Boat insurance added 2026-08-01: real Marine Pleasurecraft
+                # wording, directly crawlable.
+                "https://www.vero.co.nz/documents/personal-insurance/pleasurecraft-policy-wording.pdf",
             ),
         ),
     ),
@@ -514,6 +517,99 @@ HEALTH_INSURER_SEED: tuple[InsurerSeed, ...] = (
 )
 
 
+# Specialty verticals (pet, travel, boat) - started 2026-08-01, real
+# single-line insurers rather than a graded/diff comparison vertical of
+# their own (each type here has few enough real providers that they're
+# seeded together rather than getting their own SEED tuple per type).
+SPECIALTY_INSURER_SEED: tuple[InsurerSeed, ...] = (
+    InsurerSeed(
+        "SPCA Pet Insurance", "https://www.spcapetinsurance.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: linked directly from
+            # /policy-documents. SPCA sells 3 tiers (Everyday/Big Stuff/
+            # The Works) - "The Works" (their most comprehensive) seeded,
+            # dated 17 July 2026. Underwritten by The Hollard Insurance
+            # Company Pty Ltd.
+            known_document_urls=(
+                "https://www.spcapetinsurance.co.nz/documents/spca-pet-insurance-the-works-cover-policy-document.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "Cove", "https://www.coveinsurance.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: linked directly from
+            # /pet-insurance/. Underwritten by Aioi Nissay Dowa Insurance
+            # Co., Ltd. Cove also sells car insurance (a separate document,
+            # not yet ingested) - home & contents is publicly advertised
+            # as "coming soon", not a real product yet.
+            known_document_urls=(
+                "https://www.coveinsurance.co.nz/wp-content/uploads/2022/05/Pet-Insurance-Policy-CovePet012022.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "Pet-n-Sur", "https://www.petnsur.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: linked directly from
+            # /pet-policies/cat-and-dog/. The real document is hosted on
+            # beneficial.co.nz - Beneficial Insurance Limited is Pet-n-
+            # Sur's underwriter (the document's own text names it as "the
+            # Company"), a legitimate white-label arrangement, not a third
+            # party - same category as AA Life/Asteron.
+            trusted_document_domains=("www.beneficial.co.nz",),
+            known_document_urls=(
+                "https://www.beneficial.co.nz/wp-content/uploads/Cat-and-Dog-Policy-Wording_20260331.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "1Cover", "https://www.1cover.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: /policydetails/ redirects to a
+            # dated HTML rendering (effective 4 March 2026); the matching
+            # downloadable PDF at the predictable assets/pdf/ path was
+            # individually verified (confirmed same effective date inside
+            # the document itself). Underwritten by HDI Global Specialty
+            # SE's NZ branch.
+            known_document_urls=(
+                "https://www.1cover.co.nz/assets/pdf/1Cover-NZ-Standard-PDS_20260304.pdf",
+            ),
+        ),
+    ),
+    InsurerSeed(
+        "Nautilus Marine Insurance", "https://www.nautilusinsurance.co.nz",
+        crawl_policy=CrawlPolicy(
+            # Confirmed live 2026-08-01: linked directly from
+            # /insurance/boat-insurance/, real and directly downloadable
+            # (no WAF issue) - but the PDF itself is scanned/image-based
+            # and this project's Docling OCR fallback times out on it
+            # (120s hard limit, confirmed reproducible) - a real local
+            # processing limitation, not a source-access problem. Seeded
+            # here since the URL is genuine and correct; not yet ingested
+            # (no Document/Section rows exist for it).
+            known_document_urls=(
+                "https://www.nautilusinsurance.co.nz/wp-content/files/Nautilus-Marine_Boat-Insurance-NZ_PDS.pdf",
+            ),
+        ),
+    ),
+    # Researched 2026-08-01, not added: PD Insurance (pdinsurance.co.nz) is
+    # WAF-blocked for this project's honest User-Agent (403 on both the
+    # product page and robots.txt fetch) - no evasion attempted, matching
+    # the NZI/AA Insurance precedent. Petcover's real NZ policy documents
+    # are hosted on sovereignaustralia.com.au under a "PCNZ-PDS" naming
+    # scheme - plausible but not yet individually verified live; deferred
+    # rather than seeded on an unconfirmed guess. "Nautical Insurance"
+    # (nautical.co.nz) is NOT an independent insurer - its own site states
+    # it's "an underwriting agency of Vero Insurance New Zealand" with no
+    # policy document of its own, same category as the brokers this
+    # catalog already excludes (Gallagher, PIC, Baileys) - Vero's own real
+    # Marine Pleasurecraft wording (seeded above under Vero) is the
+    # correct real source for this cover, not a separate "Nautical
+    # Insurance" row.
+)
+
+
 def discover_insurers() -> tuple[InsurerSeed, ...]:
     """Returns the current insurer seed set.
 
@@ -526,4 +622,4 @@ def discover_insurers() -> tuple[InsurerSeed, ...]:
     checkpoint rather than a fully automatic add.
     """
 
-    return LIFE_INSURER_SEED + GENERAL_INSURER_SEED + HEALTH_INSURER_SEED
+    return LIFE_INSURER_SEED + GENERAL_INSURER_SEED + HEALTH_INSURER_SEED + SPECIALTY_INSURER_SEED
