@@ -208,6 +208,29 @@ LIFE_INSURER_SEED: tuple[InsurerSeed, ...] = (
             # sections), none of them insurance product content - a
             # sibling problem to the existing /investments/ exclusion.
             excluded_path_substrings=DEFAULT_EXCLUDED_PATH_SUBSTRINGS + ("/smeindex/",),
+            # Found 2026-08-01: asteronlife.co.nz itself never publishes a
+            # real policy wording, only marketing brochures - unlike AIA's
+            # kiwicover.co.nz mirror (an AIA-branded broker site), this is
+            # Asteron's real "Personal Insurance Policy Document" (Life
+            # Cover, Trauma Recovery, TPD, Cancer, Income Protection,
+            # Workability, Mortgage and Rent Cover sections) hosted on
+            # lifedirect.co.nz, NZ's largest general-purpose life insurance
+            # comparison broker - not Asteron-branded, but a real,
+            # currently-served document supplied by the insurer for
+            # quoting/compliance purposes, same "real content on a sibling
+            # domain" category this project already accepts elsewhere.
+            # Caveat: this is genuinely the newest version found after
+            # checking Asteron's own site, a live browser render of
+            # lifedirect.co.nz's Asteron pages, and a web search - the PDF
+            # itself is dated 2017 (an older one, dated 2015, also still
+            # resolves at fileid=784), noticeably older than this project's
+            # other life insurer wordings. Used anyway since no more recent
+            # version could be located; flagged in nz_insurer_catalog.py
+            # rather than silently presented as current.
+            trusted_document_domains=("www.lifedirect.co.nz",),
+            known_document_urls=(
+                "https://www.lifedirect.co.nz/filesdisplay.aspx?type=docsrep&fileid=1782",
+            ),
         ),
     ),
     InsurerSeed(

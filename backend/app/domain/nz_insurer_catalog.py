@@ -72,7 +72,12 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
         "Sold by Suncorp to Resolution Life in 2025 (now part of the Nippon "
         "Life-owned Acenda Group) - remains open to new business under the "
         "unchanged 'Asteron Life' brand; a rebrand to 'Acenda Life' is "
-        "planned for 2027, not yet in effect.",
+        "planned for 2027, not yet in effect. Its own site only publishes "
+        "marketing brochures, never a real policy wording - found on "
+        "lifedirect.co.nz instead (2026-08-01), a real, currently-served "
+        "document supplied by the insurer, but dated 2017 - the newest "
+        "version locatable after checking Asteron's own site, a genuine "
+        "browser render of lifedirect.co.nz, and a web search.",
     ),
     CatalogEntry(
         "Chubb Life NZ", "https://www.chubb.com/nz-en/", ("life_cover",),
