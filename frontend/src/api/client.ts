@@ -38,24 +38,28 @@ export const api = {
     })
   },
 
-  getInsurerCoverage(): Promise<InsurerCoverage[]> {
-    return request('/insurers/coverage')
+  async getInsurerCoverage(): Promise<InsurerCoverage[]> {
+    const res = await request<{ results: InsurerCoverage[] }>('/insurers/coverage')
+    return res.results
   },
 
-  getDocuments(): Promise<DocumentRecord[]> {
+  async getDocuments(): Promise<DocumentRecord[]> {
     return request('/documents')
   },
 
-  getRiskAreas(): Promise<RiskArea[]> {
-    return request('/risk-areas')
+  async getRiskAreas(): Promise<RiskArea[]> {
+    const res = await request<{ areas: RiskArea[]; total: number }>('/risk-areas')
+    return res.areas
   },
 
-  getRiskEvents(areaCode?: string): Promise<RiskEvent[]> {
+  async getRiskEvents(areaCode?: string): Promise<RiskEvent[]> {
     const params = areaCode ? `?area_code=${areaCode}` : ''
-    return request(`/risk-events${params}`)
+    const res = await request<{ events: RiskEvent[]; total: number }>(`/risk-events${params}`)
+    return res.events
   },
 
-  getPipelineRuns(limit = 50): Promise<PipelineRun[]> {
-    return request(`/pipeline/runs?limit=${limit}`)
+  async getPipelineRuns(limit = 50): Promise<PipelineRun[]> {
+    const res = await request<{ runs: PipelineRun[]; total: number }>(`/pipeline/runs?limit=${limit}`)
+    return res.runs
   },
 }

@@ -105,7 +105,6 @@ const totalCovered = computed(() =>
           >
             <span class="w-1.5 h-1.5 rounded-full" :class="t.covered ? 'bg-teal dark:bg-teal-dark' : 'bg-slate/30 dark:bg-slate-dark/30'"></span>
             {{ t.product_type }}
-            <span v-if="t.document_count > 0" class="font-mono opacity-70">({{ t.document_count }})</span>
           </span>
         </div>
       </div>

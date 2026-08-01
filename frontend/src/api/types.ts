@@ -67,12 +67,14 @@ export interface CompareGeneralResponse {
 
 export interface InsurerCoverageType {
   product_type: string
+  offered: boolean
   covered: boolean
-  document_count: number
 }
 
 export interface InsurerCoverage {
   name: string
+  website: string
+  notes: string | null
   types: InsurerCoverageType[]
 }
 

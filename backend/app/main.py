@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.compare import router as compare_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.insurers import router as insurers_router
+from app.api.v1.pipeline import router as pipeline_router
+from app.api.v1.risk_areas import router as risk_areas_router
 
 app = FastAPI(
     title="PolicyIQ NZ API",
@@ -21,7 +23,7 @@ app = FastAPI(
 # unable to load real data since deployment because this list only ever had the GitHub Pages
 # default domain (benjamen.github.io), never the custom domain it actually moved to.
 _DEFAULT_CORS_ORIGINS = (
-    "http://localhost:5173,http://localhost:8000,"
+    "http://localhost:5173,http://localhost:5174,http://localhost:8000,"
     "https://benjamen.github.io,https://policyiq.nz,https://www.policyiq.nz,null"
 )
 allowed_origins = os.environ.get("CORS_ALLOWED_ORIGINS", _DEFAULT_CORS_ORIGINS).split(",")
@@ -40,6 +42,8 @@ app.add_middleware(
 app.include_router(compare_router, prefix="/api/v1")
 app.include_router(insurers_router, prefix="/api/v1")
 app.include_router(documents_router, prefix="/api/v1")
+app.include_router(risk_areas_router, prefix="/api/v1")
+app.include_router(pipeline_router, prefix="/api/v1")
 
 
 @app.get("/health")
