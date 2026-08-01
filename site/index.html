@@ -448,7 +448,12 @@
   .grade-ring.warn { --ring-color: var(--amber); }
   .grade-ring.bad { --ring-color: var(--brick); }
 
-  .criteria-list { display: flex; flex-direction: column; gap: 9px; }
+  .criteria-list { display: flex; flex-direction: column; gap: 10px; }
+  .criterion-group-label {
+    font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint);
+    font-weight: 700; margin: 10px 0 1px;
+  }
+  .criterion-group-label:first-child { margin-top: 0; }
   .criterion {
     display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px;
   }
@@ -456,14 +461,24 @@
   .criterion b { grid-column: 2; font-weight: 600; text-align: right; font-size: 12px; }
   .criterion .crit-bar { grid-column: 1 / -1; }
   .crit-bar {
-    display: block; height: 4px; border-radius: 3px; background: var(--slate-soft); position: relative; overflow: hidden;
+    display: block; height: 3px; border-radius: 3px; background: var(--slate-soft); position: relative; overflow: hidden;
   }
   .crit-bar::after {
     content: ""; position: absolute; inset: 0; width: var(--w, 0%);
     background: var(--teal); border-radius: 3px;
   }
+  .criterion-help { grid-column: 1 / -1; font-size: 11px; color: var(--text-faint); line-height: 1.45; }
+  .criterion .loc-ref { grid-column: 1 / -1; margin-top: 1px; }
   .criterion.muted span, .criterion.muted b { color: var(--text-faint); font-style: italic; font-weight: 500; }
   .criterion.muted .crit-bar::after { background: var(--slate); opacity: 0.4; }
+
+  .exclusions-gap {
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .exclusions-gap .criterion-group-label { margin-top: 0; }
+  .exclusions-gap p {
+    font-size: 11.5px; color: var(--text-faint); line-height: 1.55; margin: 0; font-style: italic;
+  }
 
   .grade-footnote { margin: 18px 2px 0; font-size: 12px; color: var(--text-faint); max-width: 68ch; line-height: 1.6; }
 
@@ -714,6 +729,12 @@
           <h2>Life Cover — graded for age 38, non-smoker, Professional</h2>
           <span class="pill neutral" id="data-source-pill">Loading…</span>
         </div>
+        <div class="compare-toolbar" style="margin-top:-6px">
+          <div class="selected-count" id="life-view-sub">Card view — every criterion, per insurer.</div>
+          <div class="toolbar-actions">
+            <div class="toggle-row" id="life-report-toggle"><div class="toggle" id="life-report-switch"></div> Detailed report</div>
+          </div>
+        </div>
 
         <!-- Loading state -->
         <div class="grade-board" id="compare-life-loading" style="display:none">
@@ -754,6 +775,9 @@
         <!-- Loaded state (default) -->
         <div id="compare-life-loaded">
           <div class="grade-board" id="grade-board"></div>
+          <div class="table-wrap" id="life-report-wrap" style="display:none">
+            <table id="life-report-table"></table>
+          </div>
           <p class="grade-footnote">Grades are computed deterministically from extracted, citation-verified facts — never a second AI judgment call. Criteria with no extracted fact are excluded from the score, not counted as a failure. Loaded live from <code class="mono">/api/v1/compare/life</code>.</p>
         </div>
       </div>
@@ -936,10 +960,6 @@
   const params = new URLSearchParams(location.search);
   const API_BASE = params.get('api_base') || 'https://api.policyiq.nz';
 
-  const CRITERIA_ORDER = [
-    'tpd_definition', 'trauma_conditions', 'occupation_restrictions',
-    'premium_structure', 'waiver_of_premium', 'automatic_benefits',
-  ];
   const CRITERIA_LABELS = {
     tpd_definition: 'TPD definition',
     trauma_conditions: 'Trauma conditions',
@@ -948,6 +968,48 @@
     waiver_of_premium: 'Waiver of premium',
     automatic_benefits: 'Automatic benefits',
   };
+  // Groups the 6 scored criteria into a scannable outline instead of one
+  // flat list - same idea as Compare/Insurers' topic grouping, applied to
+  // life's fixed criteria set instead of heterogeneous extracted facts.
+  const CRITERIA_GROUPS = [
+    { label: 'Disability & occupation', keys: ['tpd_definition', 'occupation_restrictions'] },
+    { label: 'Trauma & benefits', keys: ['trauma_conditions', 'automatic_benefits'] },
+    { label: 'Premiums', keys: ['premium_structure', 'waiver_of_premium'] },
+  ];
+  // Plain-language context for what a raw_value actually means - universal,
+  // true statements about NZ life-insurance terminology (never a per-insurer
+  // claim), not extracted data. Returns null when no generic explainer
+  // applies (e.g. "not extracted").
+  function explainCriterion(key, rawValue) {
+    const v = String(rawValue || '').toLowerCase();
+    switch (key) {
+      case 'tpd_definition':
+        if (v.startsWith('own_occupation')) return "Pays out if you can't do your own job — the most generous definition.";
+        if (v.startsWith('any_occupation')) return "Only pays out if you can't do any job at all — stricter.";
+        if (v.includes('not published')) return "This insurer doesn't offer standalone TPD cover.";
+        return null;
+      case 'occupation_restrictions':
+        if (v.startsWith('exclusion')) return 'Your occupation category is fully excluded from cover.';
+        if (v.startsWith('loading')) return 'Your occupation category attracts an extra premium loading.';
+        if (v === 'no restriction on file') return 'No occupation-specific restriction extracted for this category yet.';
+        return null;
+      case 'premium_structure':
+        if (v.includes('level') && v.includes('guaranteed')) return "Same premium every year — the insurer can't increase it at renewal.";
+        if (v.includes('level') && v.includes('reviewable')) return 'Starts level, but the insurer can revise premiums at renewal.';
+        if (v.includes('stepped')) return 'Premiums rise each year as you age — cheaper now, pricier later.';
+        return null;
+      case 'waiver_of_premium':
+        if (v === 'included') return "The insurer keeps paying your premiums for you if you're unable to work.";
+        if (v === 'not included') return "You must keep paying premiums yourself even if you can't work.";
+        return null;
+      case 'trauma_conditions':
+        return /^\d+ conditions$/.test(v) ? 'Serious illnesses/injuries this cover pays a lump sum for — higher is broader.' : null;
+      case 'automatic_benefits':
+        return /^\d+ automatic benefits$/.test(v) ? 'Extra benefits bundled in automatically, at no extra premium.' : null;
+      default:
+        return null;
+    }
+  }
 
   // Never insert API text into innerHTML unescaped, even from a trusted first-party
   // endpoint - a malformed or compromised extraction could otherwise inject markup.
@@ -976,13 +1038,22 @@
         : r.ineligibility_reason
           ? `<span class="pill warn" title="${escapeHtml(r.ineligibility_reason)}">Eligible*</span>`
           : `<span class="pill ok">Eligible</span>`;
-      const criteriaHtml = CRITERIA_ORDER.map(key => {
-        const c = (r.criteria && r.criteria[key]) || {};
-        const notExtracted = c.score === null || c.score === undefined;
-        const width = notExtracted ? 0 : Math.max(0, Math.min(100, c.score));
-        const value = escapeHtml(c.raw_value || 'not extracted');
-        return `<div class="criterion${notExtracted ? ' muted' : ''}"><span>${CRITERIA_LABELS[key]}</span>`
-          + `<b>${value}</b><i class="crit-bar" style="--w:${width}%"></i></div>`;
+      const criteriaHtml = CRITERIA_GROUPS.map(group => {
+        const rowsHtml = group.keys.map(key => {
+          const c = (r.criteria && r.criteria[key]) || {};
+          const notExtracted = c.score === null || c.score === undefined;
+          const width = notExtracted ? 0 : Math.max(0, Math.min(100, c.score));
+          const value = escapeHtml(c.raw_value || 'not extracted');
+          const help = explainCriterion(key, c.raw_value);
+          const cite = (c.source && c.source.document_id)
+            ? `<button type="button" class="loc-ref" data-doc-id="${escapeHtml(c.source.document_id)}" data-page="${c.source.page}" data-label="${escapeHtml('p.' + c.source.page + ' · ' + c.source.document)}">p.${c.source.page} · view source</button>`
+            : '';
+          return `<div class="criterion${notExtracted ? ' muted' : ''}"><span>${CRITERIA_LABELS[key]}</span>`
+            + `<b>${value}</b><i class="crit-bar" style="--w:${width}%"></i>`
+            + (help ? `<div class="criterion-help">${escapeHtml(help)}</div>` : '')
+            + cite + `</div>`;
+        }).join('');
+        return `<div class="criterion-group-label">${escapeHtml(group.label)}</div>${rowsHtml}`;
       }).join('');
       return `<div class="card grade-card">
         <div class="grade-card-head">
@@ -996,9 +1067,82 @@
           </div>
         </div>
         <div class="criteria-list">${criteriaHtml}</div>
+        <div class="exclusions-gap">
+          <div class="criterion-group-label">Exclusions &amp; waiting periods</div>
+          <p>Not yet extracted for ${escapeHtml(r.insurer)} — this project doesn't have a structured exclusions dataset for life products yet (real exclusion data already exists for house/car/pet etc. — see the Compare type strip).</p>
+        </div>
       </div>`;
     }).join('');
   }
+
+  /* ---- Life > Detailed report: every criterion as a row, every insurer as
+     a column - a "compare in detail" complement to the card view above,
+     same row/column diff-table shape as the Compare general/Insurers
+     tables, applied to Life's fixed 6-criterion + eligibility set instead
+     of heterogeneous extracted facts. ---- */
+  let lastLifeResults = [];
+  let lifeReportOn = false;
+
+  function lifeReportCell(r, key) {
+    const c = (r.criteria && r.criteria[key]) || {};
+    const notExtracted = c.score === null || c.score === undefined;
+    const value = escapeHtml(c.raw_value || 'not extracted');
+    const help = explainCriterion(key, c.raw_value);
+    const cite = (c.source && c.source.document_id)
+      ? `<button type="button" class="loc-ref" data-doc-id="${escapeHtml(c.source.document_id)}" data-page="${c.source.page}" data-label="${escapeHtml('p.' + c.source.page + ' · ' + c.source.document)}">p.${c.source.page} · view source</button>`
+      : '';
+    return `<td${notExtracted ? ' class="compare-cell-missing"' : ''}>
+      <div class="cell-value${notExtracted ? '' : ' mono-val'}">${value}</div>
+      ${help ? `<div class="criterion-help" style="margin-top:3px">${escapeHtml(help)}</div>` : ''}
+      ${cite}
+    </td>`;
+  }
+
+  function renderLifeReportTable(results) {
+    const wrap = document.getElementById('life-report-wrap');
+    const table = document.getElementById('life-report-table');
+    if (!results || results.length === 0) { wrap.style.display = 'none'; return; }
+
+    const eligibilityRow = `<tr><td class="row-label">Eligibility</td>${results.map(r => {
+      const pill = !r.eligible
+        ? `<span class="pill bad" style="display:inline-block">Ineligible</span>`
+        : r.ineligibility_reason
+          ? `<span class="pill warn" style="display:inline-block">Eligible*</span>`
+          : `<span class="pill ok" style="display:inline-block">Eligible</span>`;
+      const note = r.ineligibility_reason ? `<div class="criterion-help" style="margin-top:5px">${escapeHtml(r.ineligibility_reason)}</div>` : '';
+      return `<td>${pill}${note}</td>`;
+    }).join('')}</tr>`;
+
+    const scoreRow = `<tr><td class="row-label">Overall score</td>${results.map(r =>
+      `<td><span class="cell-value mono-val" style="font-size:15px">${Math.round(r.overall_score || 0)}</span> <span class="criterion-help" style="display:inline">/ 100 · ${Math.round((r.data_completeness || 0) * 100)}% data completeness</span></td>`
+    ).join('')}</tr>`;
+
+    const groupRows = CRITERIA_GROUPS.map(group => [
+      `<tr><td class="row-label" colspan="${results.length + 1}" style="background:var(--paper);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);font-weight:700">${escapeHtml(group.label)}</td></tr>`,
+      ...group.keys.map(key =>
+        `<tr><td class="row-label">${CRITERIA_LABELS[key]}</td>${results.map(r => lifeReportCell(r, key)).join('')}</tr>`
+      ),
+    ].join('')).join('');
+
+    const exclusionsRow = `<tr><td class="row-label" colspan="${results.length + 1}" style="background:var(--paper);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);font-weight:700">Exclusions &amp; waiting periods</td></tr>
+      <tr><td class="row-label">Structured exclusions data</td>${results.map(r =>
+        `<td class="compare-cell-missing">Not yet extracted for ${escapeHtml(r.insurer)}</td>`
+      ).join('')}</tr>`;
+
+    const theadHtml = `<tr><th style="min-width:170px">Attribute</th>${results.map(r => `<th>${escapeHtml(r.insurer)}</th>`).join('')}</tr>`;
+    table.innerHTML = `<thead>${theadHtml}</thead><tbody>${eligibilityRow}${scoreRow}${groupRows}${exclusionsRow}</tbody>`;
+    if (lifeReportOn) wrap.style.display = 'block';
+  }
+
+  document.getElementById('life-report-toggle').addEventListener('click', () => {
+    lifeReportOn = !lifeReportOn;
+    document.getElementById('life-report-switch').classList.toggle('on', lifeReportOn);
+    document.getElementById('grade-board').style.display = lifeReportOn ? 'none' : 'grid';
+    document.getElementById('life-report-wrap').style.display = lifeReportOn ? 'block' : 'none';
+    document.getElementById('life-view-sub').textContent = lifeReportOn
+      ? `Detailed report — every criterion, side by side, for all ${lastLifeResults.length} insurers.`
+      : 'Card view — every criterion, per insurer.';
+  });
 
   async function fetchLifeComparison() {
     setCompareState('loading');
@@ -1017,8 +1161,10 @@
       if (res.status === 401) { showLogin(); return; }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      lastLifeResults = data.results;
       setDataSource(data.data_source);
       renderGradeBoard(data.results);
+      renderLifeReportTable(data.results);
       setCompareState('loaded');
     } catch (err) {
       setCompareState('error');
