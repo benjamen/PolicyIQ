@@ -69,6 +69,7 @@ def compare_life_insurance(request: CompareRequest, session: Session = Depends(g
                     weight=c.weight,
                     raw_value=c.raw_value,
                     source=SourceRefOut(**c.source.__dict__) if c.source else None,
+                    rationale=c.rationale,
                 )
                 for name, c in r.criteria.items()
             },

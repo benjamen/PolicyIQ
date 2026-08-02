@@ -1,26 +1,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { api } from '@/api/client'
-import type { InsurerCoverage, PipelineRun } from '@/api/types'
+import type { InsurerCoverage } from '@/api/types'
+import { formatLabel } from '@/utils/format'
 
 const insurers = ref<InsurerCoverage[]>([])
-const pipelineRuns = ref<PipelineRun[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
 const stats = ref({
   totalInsurers: 0,
   coveredSlots: 0,
-  totalSlots: 0,
-  lastRunStatus: '—' as string,
-  documentsProcessed: 0,
+  documentCount: 0,
 })
 
 onMounted(async () => {
   try {
-    const [cov, runs] = await Promise.allSettled([
+    const [cov, docs] = await Promise.allSettled([
       api.getInsurerCoverage(),
-      api.getPipelineRuns(10),
+      api.getDocuments(),
     ])
 
     if (cov.status === 'fulfilled') {
@@ -28,15 +26,10 @@ onMounted(async () => {
       const allTypes = cov.value.flatMap(i => i.types)
       stats.value.totalInsurers = cov.value.length
       stats.value.coveredSlots = allTypes.filter(t => t.covered).length
-      stats.value.totalSlots = allTypes.length
     }
 
-    if (runs.status === 'fulfilled') {
-      pipelineRuns.value = runs.value
-      if (runs.value.length > 0) {
-        stats.value.lastRunStatus = runs.value[0].status
-        stats.value.documentsProcessed = runs.value.reduce((s, r) => s + r.documents_found, 0)
-      }
+    if (docs.status === 'fulfilled') {
+      stats.value.documentCount = docs.value.length
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load dashboard data'
@@ -44,40 +37,66 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-const coveragePercent = () =>
-  stats.value.totalSlots > 0
-    ? Math.round((stats.value.coveredSlots / stats.value.totalSlots) * 100)
-    : 0
 </script>
 
 <template>
   <div class="space-y-6 max-w-6xl">
+    <!-- Hero -->
+    <section class="hero-panel px-6 py-8 sm:px-8 sm:py-10">
+      <!-- Decorative shield watermark -->
+      <svg class="pointer-events-none absolute -right-6 -bottom-8 w-56 h-56 text-white/[0.06]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="0.75">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+      <div class="relative max-w-2xl">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/70">Evidence-grounded insurance intelligence</p>
+        <h1 class="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">
+          Compare NZ insurance on the facts, not the marketing.
+        </h1>
+        <p class="mt-3 text-sm text-white/80 leading-relaxed">
+          Every score and claim on PolicyIQ is extracted from real policy documents and brochures -
+          and ships with a citation you can verify yourself.
+        </p>
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <router-link to="/compare" class="hero-cta-primary">
+            Compare insurers
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+          </router-link>
+          <router-link to="/documents" class="hero-cta-secondary">Browse source documents</router-link>
+        </div>
+      </div>
+    </section>
+
     <!-- KPI Cards -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="card p-4">
-        <p class="text-xs font-medium text-slate dark:text-slate-dark uppercase tracking-wide">Insurers</p>
-        <p class="stat-value mt-1 text-teal dark:text-teal-dark">{{ stats.totalInsurers }}</p>
-        <p class="text-xs text-slate dark:text-slate-dark mt-1">tracked in registry</p>
+        <div class="flex items-center justify-between">
+          <p class="eyebrow">Insurers</p>
+          <span class="icon-chip !w-8 !h-8">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+          </span>
+        </div>
+        <p class="stat-value mt-2 text-teal dark:text-teal-dark">{{ stats.totalInsurers }}</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-1">NZ insurers compared</p>
       </div>
       <div class="card p-4">
-        <p class="text-xs font-medium text-slate dark:text-slate-dark uppercase tracking-wide">Coverage</p>
-        <p class="stat-value mt-1">{{ coveragePercent() }}%</p>
-        <p class="text-xs text-slate dark:text-slate-dark mt-1">{{ stats.coveredSlots }}/{{ stats.totalSlots }} product slots</p>
+        <div class="flex items-center justify-between">
+          <p class="eyebrow">Source documents</p>
+          <span class="icon-chip !w-8 !h-8">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          </span>
+        </div>
+        <p class="stat-value mt-2">{{ stats.documentCount }}</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-1">policies & brochures analysed</p>
       </div>
       <div class="card p-4">
-        <p class="text-xs font-medium text-slate dark:text-slate-dark uppercase tracking-wide">Documents</p>
-        <p class="stat-value mt-1">{{ stats.documentsProcessed }}</p>
-        <p class="text-xs text-slate dark:text-slate-dark mt-1">processed in pipeline</p>
-      </div>
-      <div class="card p-4">
-        <p class="text-xs font-medium text-slate dark:text-slate-dark uppercase tracking-wide">Last Run</p>
-        <p class="stat-value mt-1 capitalize" :class="{
-          'text-teal dark:text-teal-dark': stats.lastRunStatus === 'completed',
-          'text-amber dark:text-amber-dark': stats.lastRunStatus === 'partial',
-          'text-brick dark:text-brick-dark': stats.lastRunStatus === 'failed',
-        }">{{ stats.lastRunStatus }}</p>
-        <p class="text-xs text-slate dark:text-slate-dark mt-1">pipeline status</p>
+        <div class="flex items-center justify-between">
+          <p class="eyebrow">Product types</p>
+          <span class="icon-chip !w-8 !h-8">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          </span>
+        </div>
+        <p class="stat-value mt-2">{{ stats.coveredSlots }}</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-1">with verified cover data</p>
       </div>
     </div>
 
@@ -90,16 +109,15 @@ const coveragePercent = () =>
     </div>
 
     <div v-else-if="error" class="card p-6 border-brick/20">
-      <p class="text-sm text-brick dark:text-brick-dark font-medium">Failed to load data</p>
-      <p class="text-xs text-slate dark:text-slate-dark mt-1">{{ error }}</p>
-      <p class="text-xs text-slate dark:text-slate-dark mt-2">Ensure the backend API is running on port 8000.</p>
+      <p class="text-sm text-brick dark:text-brick-dark font-medium">We couldn't load the latest data</p>
+      <p class="text-xs text-slate dark:text-slate-dark mt-1">Please try again in a moment.</p>
     </div>
 
     <!-- Coverage Grid -->
     <div v-else-if="insurers.length > 0" class="card overflow-hidden">
       <div class="px-5 py-4 border-b border-black/5 dark:border-white/10">
         <h2 class="section-title">Insurer Coverage Matrix</h2>
-        <p class="text-xs text-slate dark:text-slate-dark mt-0.5">Product types with verified document extractions</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-0.5">Product types we compare per insurer</p>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -130,7 +148,7 @@ const coveragePercent = () =>
                     class="badge"
                     :class="t.covered ? 'badge-covered' : 'badge-silent'"
                   >
-                    {{ t.product_type }}
+                    {{ formatLabel(t.product_type) }}
                   </span>
                 </div>
               </td>
@@ -146,32 +164,7 @@ const coveragePercent = () =>
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
       </svg>
       <p class="mt-3 text-sm font-medium text-slate dark:text-slate-dark">No insurer data yet</p>
-      <p class="text-xs text-slate dark:text-slate-dark mt-1">Run the ingestion pipeline to populate the database.</p>
-    </div>
-
-    <!-- Recent Pipeline Runs -->
-    <div v-if="pipelineRuns.length > 0" class="card overflow-hidden">
-      <div class="px-5 py-4 border-b border-black/5 dark:border-white/10">
-        <h2 class="section-title">Recent Pipeline Runs</h2>
-      </div>
-      <div class="divide-y divide-black/[0.03] dark:divide-white/[0.04]">
-        <div v-for="run in pipelineRuns.slice(0, 5)" :key="run.id" class="flex items-center justify-between px-5 py-3">
-          <div class="flex items-center gap-3">
-            <span class="w-2 h-2 rounded-full" :class="{
-              'bg-teal dark:bg-teal-dark': run.status === 'completed',
-              'bg-amber dark:bg-amber-dark': run.status === 'partial' || run.status === 'running',
-              'bg-brick dark:bg-brick-dark': run.status === 'failed',
-            }"></span>
-            <span class="text-sm font-medium">{{ run.insurer }}</span>
-          </div>
-          <div class="flex items-center gap-4 text-xs text-slate dark:text-slate-dark font-mono">
-            <span>{{ run.documents_found }} docs</span>
-            <span>{{ run.extractions_ok }} ok</span>
-            <span v-if="run.extractions_failed > 0" class="text-brick dark:text-brick-dark">{{ run.extractions_failed }} failed</span>
-            <span>{{ new Date(run.started_at).toLocaleDateString('en-NZ') }}</span>
-          </div>
-        </div>
-      </div>
+      <p class="text-xs text-slate dark:text-slate-dark mt-1">Check back soon - we're adding more insurers and products.</p>
     </div>
   </div>
 </template>

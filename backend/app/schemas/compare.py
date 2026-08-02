@@ -38,6 +38,9 @@ class CriterionOut(BaseModel):
     weight: float
     raw_value: str
     source: SourceRefOut | None
+    # Plain-English explanation of why this score was assigned (the grading
+    # rule applied to the extracted fact) - powers the line-by-line "why".
+    rationale: str
 
 
 class GeneralInsuranceFactOut(BaseModel):

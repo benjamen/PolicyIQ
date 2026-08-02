@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '@/api/client'
 import type { InsurerCoverage } from '@/api/types'
+import { formatLabel } from '@/utils/format'
 
 const insurers = ref<InsurerCoverage[]>([])
 const loading = ref(true)
@@ -104,7 +105,7 @@ const totalCovered = computed(() =>
               : 'border-black/5 dark:border-white/10 text-slate dark:text-slate-dark'"
           >
             <span class="w-1.5 h-1.5 rounded-full" :class="t.covered ? 'bg-teal dark:bg-teal-dark' : 'bg-slate/30 dark:bg-slate-dark/30'"></span>
-            {{ t.product_type }}
+            {{ formatLabel(t.product_type) }}
           </span>
         </div>
       </div>

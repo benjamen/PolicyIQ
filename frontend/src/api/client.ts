@@ -8,6 +8,7 @@ import type {
   PipelineRun,
   RiskArea,
   RiskEvent,
+  SectionText,
 } from './types'
 
 const BASE = '/api/v1'
@@ -61,5 +62,10 @@ export const api = {
   async getPipelineRuns(limit = 50): Promise<PipelineRun[]> {
     const res = await request<{ runs: PipelineRun[]; total: number }>(`/pipeline/runs?limit=${limit}`)
     return res.runs
+  },
+
+  /** Fetch the full extracted source text for a document page (citation "view source"). */
+  getSectionText(documentId: string, page: number): Promise<SectionText> {
+    return request(`/documents/${documentId}/pages/${page}`)
   },
 }

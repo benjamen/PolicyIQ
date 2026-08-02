@@ -2,25 +2,40 @@
 
 export type CoverageStatus = 'covered' | 'excluded' | 'limited' | 'sub_limited' | 'silent'
 
+export type FactCategory = 'benefit' | 'limit' | 'exclusion'
+
+/** Citation provenance for an extracted fact. Matches backend SourceRefOut. */
 export interface SourceRef {
+  insurer: string
+  document: string
+  page: number
+  paragraph_ref: string
+  confidence: number
+  document_id: string | null
+}
+
+/** Full extracted source text for a document page (backs "view source"). */
+export interface SectionText {
   document_id: string
-  page: number | null
-  quote: string
-  verified: boolean
+  page: number
+  text: string
 }
 
 export interface GeneralInsuranceFact {
-  category: string
+  category: FactCategory
   name: string
-  detail: string
+  detail: string | null
   source: SourceRef | null
 }
 
+/** Grading scores are on a 0-100 scale from the backend. */
 export interface CriterionOut {
-  score: number
+  score: number | null
   weight: number
   raw_value: string
   source: SourceRef | null
+  /** Plain-English explanation of why this score was assigned. */
+  rationale: string
 }
 
 export interface GradeReport {
@@ -63,6 +78,14 @@ export interface CompareGeneralResponse {
   filters: CompareGeneralRequest
   results: GeneralProductProfile[]
   data_source: string
+}
+
+/** Aggregate stats for a general-insurance profile, computed client-side. */
+export interface ProfileStats {
+  benefits: number
+  limits: number
+  exclusions: number
+  totalLimitValue: number
 }
 
 export interface InsurerCoverageType {

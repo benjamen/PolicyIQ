@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '@/api/client'
 import type { DocumentRecord } from '@/api/types'
+import { formatLabel } from '@/utils/format'
 
 const documents = ref<DocumentRecord[]>([])
 const loading = ref(true)
@@ -118,7 +119,7 @@ function formatDate(iso: string): string {
               </td>
               <td class="px-4 py-3 text-xs">{{ doc.insurer }}</td>
               <td class="px-4 py-3">
-                <span class="badge-silent">{{ doc.product_type }}</span>
+                <span class="badge-silent">{{ formatLabel(doc.product_type) }}</span>
               </td>
               <td class="px-4 py-3 text-center font-mono text-xs">{{ doc.page_count ?? '—' }}</td>
               <td class="px-4 py-3 text-xs text-slate dark:text-slate-dark">{{ formatDate(doc.downloaded_at) }}</td>

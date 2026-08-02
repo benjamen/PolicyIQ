@@ -31,3 +31,9 @@ dist/
 # Editors
 .vscode/
 .idea/
+
+# Local runtime data (SQLite DBs, pipeline state)
+backend/data/
+
+# TypeScript build info
+*.tsbuildinfo
