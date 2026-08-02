@@ -298,6 +298,19 @@ function completenessTone(c: number): string {
   if (c >= 0.5) return 'bg-amber dark:bg-amber-dark'
   return 'bg-brick dark:bg-brick-dark'
 }
+
+// Real distinct product names (e.g. "Progressive Care") show as-is. Insurers
+// not yet split into distinct products still carry the raw product_type
+// placeholder as their product_name (e.g. "life_cover", "house") - format
+// those through the same label convention as everything else, rather than
+// showing a raw snake_case string as if it were a real product name.
+function productDisplayName(productName: string): string {
+  // Real product names are Title Case (e.g. "Progressive Care", "Term
+  // Cover"); a raw product_type placeholder is always all-lowercase
+  // ("life_cover", "house") - that's the reliable signal, not underscores
+  // alone (some real product_types like "house" have none).
+  return productName === productName.toLowerCase() ? formatLabel(productName) : productName
+}
 </script>
 
 <template>
@@ -406,8 +419,8 @@ function completenessTone(c: number): string {
           <div class="px-4 py-3.5 border-b border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03]">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <h3 class="font-semibold text-sm truncate" :title="profile.insurer">{{ profile.insurer }}</h3>
-                <p class="text-[11px] text-slate dark:text-slate-dark truncate mt-0.5">{{ profile.product_name }}</p>
+                <h3 class="font-semibold text-sm truncate" :title="productDisplayName(profile.product_name)">{{ productDisplayName(profile.product_name) }}</h3>
+                <p class="text-[11px] text-slate dark:text-slate-dark truncate mt-0.5">{{ profile.insurer }}</p>
               </div>
               <div class="flex items-center gap-1 shrink-0">
                 <button
@@ -619,8 +632,8 @@ function completenessTone(c: number): string {
 
               <div class="flex-1 min-w-0">
                 <div class="flex flex-wrap items-center gap-2">
-                  <h3 class="font-semibold text-base">{{ report.insurer }}</h3>
-                  <span class="text-xs text-slate dark:text-slate-dark">{{ report.product_name }}</span>
+                  <h3 class="font-semibold text-base">{{ productDisplayName(report.product_name) }}</h3>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/5 dark:bg-white/10 text-slate dark:text-slate-dark">{{ report.insurer }}</span>
                   <span v-if="!report.eligible" class="badge-excluded">Ineligible</span>
                   <button
                     type="button"
