@@ -80,12 +80,58 @@ def _get_or_create_product(session: Session, insurer_id: uuid.UUID, product_type
 
 
 def _get_or_create_policy(session: Session, product_id: uuid.UUID, name: str) -> Policy:
-    policy = session.execute(select(Policy).where(Policy.product_id == product_id)).scalar_one_or_none()
+    """Keyed by (product_id, name), not product_id alone - a Product (e.g.
+    "AIA life_cover") genuinely has multiple named Policies in reality (Life
+    Cover, Progressive Care, Waiver of Premium, ...), each with its own real
+    wording document. Keying by product_id alone was silently collapsing
+    every distinct product an insurer sells in one category into a single
+    merged Policy row - confirmed 2026-08 against real registry.py data:
+    7 of 8 life insurers already had 2-8 genuinely distinct wording PDFs
+    downloaded and merged this way."""
+    policy = session.execute(
+        select(Policy).where(Policy.product_id == product_id, Policy.name == name)
+    ).scalar_one_or_none()
     if policy is None:
         policy = Policy(product_id=product_id, name=name)
         session.add(policy)
         session.flush()
     return policy
+
+
+def derive_policy_name(document_url: str, product_type: str) -> str:
+    """Real product name for a policy, from the document's own filename -
+    reuses the exact convention already established for document display
+    titles (app/api/v1/documents.py::_title_from_storage_key), so a document
+    named ".../AIA-Living-Progressive-Care-Policy-Wording.pdf" becomes the
+    Policy name "Progressive Care", not the generic product_type "life
+    cover". Falls back to product_type itself when the filename carries no
+    useful signal (e.g. a bare "policy.pdf")."""
+    from urllib.parse import urlsplit
+
+    path = urlsplit(document_url).path
+    filename = path.rsplit("/", 1)[-1]
+    stem = filename.rsplit(".", 1)[0] if "." in filename else filename
+    words = stem.replace("-", " ").replace("_", " ").replace("%20", " ").strip()
+    # Strip common noise tokens (insurer name repeated in the filename,
+    # boilerplate "policy/wording/document/terms and conditions" suffixes,
+    # numeric prefixes like crawl-order "01", "02") down to the product-
+    # specific words - e.g. "AIA Living Progressive Care Policy Wording"
+    # -> "Progressive Care".
+    noise = {
+        "policy", "wording", "document", "terms", "and", "conditions", "the",
+        "v1", "v2", "v3", "v4", "v5", "v6", "v7",
+    }
+    tokens = [t for t in words.split() if t]
+    # Drop a purely-numeric leading token (crawl-order prefix like "01").
+    if tokens and tokens[0].isdigit():
+        tokens = tokens[1:]
+    kept = [t for t in tokens if t.lower() not in noise and not t.isdigit()]
+    # No .title()/.upper() normalization - insurers' own filenames already
+    # carry correct real-world capitalization (e.g. "AIA-Living-Progressive-
+    # Care" -> "AIA Living Progressive Care"); title-casing would wrongly
+    # turn "AIA" into "Aia".
+    name = " ".join(kept).strip()
+    return name if name else product_type
 
 
 def _get_or_create_current_policy_version(session: Session, policy_id: uuid.UUID) -> PolicyVersion:
@@ -150,7 +196,8 @@ def run_ingest(
 
                 insurer = _get_or_create_insurer(session, insurer_name, website_root)
                 product = _get_or_create_product(session, insurer.id, product_type)
-                policy = _get_or_create_policy(session, product.id, name=product_type)
+                policy_name = row.get("policy_name") or derive_policy_name(document_url, product_type)
+                policy = _get_or_create_policy(session, product.id, name=policy_name)
                 policy_version = _get_or_create_current_policy_version(session, policy.id)
 
                 outcome = download_and_version(
