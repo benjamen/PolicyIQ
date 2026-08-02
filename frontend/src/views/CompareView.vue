@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '@/api/client'
 import type {
   CompareLifeResponse,
@@ -41,7 +42,16 @@ const categories: CategoryDef[] = [
   { value: 'health', label: 'Health', kind: 'general' },
 ]
 
-const activeCategory = ref('house')
+const route = useRoute()
+
+// Deep-linked from Products ("View in Compare") as a real product_type
+// (e.g. "life_cover", "house") - general categories map 1:1 to activeCategory,
+// life-shaped ones map to the "life" tab with that product_type selected.
+const LIFE_SHAPED_TYPES = ['life_cover', 'tpd', 'trauma', 'income_protection']
+const initialType = typeof route.query.type === 'string' ? route.query.type : null
+const activeCategory = ref(
+  initialType && LIFE_SHAPED_TYPES.includes(initialType) ? 'life' : initialType || 'house'
+)
 const activeKind = computed(
   () => categories.find((c) => c.value === activeCategory.value)?.kind ?? 'general'
 )
@@ -83,7 +93,7 @@ const lifeFilters = ref({
   age: 35,
   smoker_status: 'non_smoker' as 'non_smoker' | 'smoker',
   occupation_category: 'professional',
-  product_type: 'life_cover',
+  product_type: (initialType && LIFE_SHAPED_TYPES.includes(initialType) ? initialType : 'life_cover') as string,
 })
 const lifeResults = ref<GradeReport[]>([])
 const expandedExclusions = ref<Set<string>>(new Set())
@@ -223,8 +233,13 @@ watch(activeCategory, (cat) => {
   if (categories.find((c) => c.value === cat)?.kind === 'general') runGeneralCompare()
 })
 
-// Run the default (Home) comparison on mount.
-runGeneralCompare()
+// Run the default (Home) comparison on mount - or the deep-linked category
+// from Products, general or life.
+if (activeKind.value === 'life') {
+  runLifeCompare()
+} else {
+  runGeneralCompare()
+}
 
 // ---- General derived data ----
 const sortedGeneralResults = computed(() =>

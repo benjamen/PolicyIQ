@@ -10,6 +10,12 @@ export const router = createRouter({
       meta: { title: 'Dashboard', subtitle: 'NZ insurance at a glance' },
     },
     {
+      path: '/products',
+      name: 'products',
+      component: () => import('@/views/ProductsView.vue'),
+      meta: { title: 'Products', subtitle: 'Every product, browsable on its own' },
+    },
+    {
       path: '/compare',
       name: 'compare',
       component: () => import('@/views/CompareView.vue'),

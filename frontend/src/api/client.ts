@@ -6,6 +6,7 @@ import type {
   DocumentRecord,
   InsurerCoverage,
   PipelineRun,
+  ProductSummary,
   RiskArea,
   RiskEvent,
   SectionText,
@@ -40,6 +41,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(filters),
     })
+  },
+
+  async getProducts(): Promise<ProductSummary[]> {
+    const res = await request<{ results: ProductSummary[] }>('/products')
+    return res.results
   },
 
   async getInsurerCoverage(): Promise<InsurerCoverage[]> {

@@ -101,6 +101,16 @@ export interface InsurerCoverage {
   types: InsurerCoverageType[]
 }
 
+/** One row of the Products tab's flat, cross-category product catalog. */
+export interface ProductSummary {
+  insurer: string
+  product_name: string
+  product_type: string
+  policy_version_id: string
+  kind: 'life' | 'general'
+  fact_count: number
+}
+
 export interface RiskArea {
   code: string
   name: string

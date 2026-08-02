@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
@@ -23,6 +23,22 @@ const createdKey = ref('')  // shown once
 const loading = ref(false)
 const error = ref('')
 
+// Anonymous visitors see this page too now (previously a hard redirect to
+// /login with nothing shown) - same real layout, populated with clearly-
+// labelled example data so people can see what an account looks like
+// before signing up. Never real data, never sent anywhere.
+const EXAMPLE_USER = {
+  name: 'Jordan Example',
+  email: 'jordan@example.co.nz',
+  credit_balance: 12,
+  subscription_active: true,
+  role: 'consumer',
+}
+const EXAMPLE_KEYS: ApiKeyItem[] = [
+  { id: 'example-1', label: 'production', key_prefix: 'piq_8fK2xQ', created_at: '2026-06-14T00:00:00Z', last_used_at: '2026-08-01T00:00:00Z', revoked_at: null },
+  { id: 'example-2', label: 'staging', key_prefix: 'piq_2vLmR9', created_at: '2026-05-02T00:00:00Z', last_used_at: null, revoked_at: null },
+]
+
 function authHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' }
 }
@@ -35,6 +51,10 @@ async function loadKeys() {
 }
 
 async function createKey() {
+  if (!isAuthenticated.value) {
+    router.push('/login')
+    return
+  }
   error.value = ''
   createdKey.value = ''
   loading.value = true
@@ -60,6 +80,10 @@ async function createKey() {
 }
 
 async function revokeKey(id: string) {
+  if (!isAuthenticated.value) {
+    router.push('/login')
+    return
+  }
   try {
     await fetch(`${BASE}/api-keys/${id}`, { method: 'DELETE', headers: authHeaders() })
     await loadKeys()
@@ -71,53 +95,66 @@ function doLogout() {
   router.push('/')
 }
 
+const displayUser = computed(() => (isAuthenticated.value ? user.value : EXAMPLE_USER))
+const displayKeys = computed(() => (isAuthenticated.value ? keys.value : EXAMPLE_KEYS))
+
 function formatDate(d: string | null): string {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 onMounted(() => {
-  if (!isAuthenticated.value) {
-    router.push('/login')
-    return
-  }
-  loadKeys()
+  if (isAuthenticated.value) loadKeys()
 })
 </script>
 
 <template>
   <div class="max-w-2xl mx-auto space-y-8">
+    <!-- Preview banner for anonymous visitors -->
+    <div v-if="!isAuthenticated" class="rounded-xl border border-teal/30 dark:border-teal-dark/30 bg-teal-soft dark:bg-teal-soft-dark p-4 flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <p class="text-sm font-semibold text-teal dark:text-teal-dark">This is an example account</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-0.5">Sign in or create an account to see your own credits, API keys and plan.</p>
+      </div>
+      <router-link to="/login" class="shrink-0 px-4 py-2 rounded-lg bg-teal dark:bg-teal-dark text-white text-sm font-medium hover:opacity-90 transition-opacity">
+        Sign in
+      </router-link>
+    </div>
+
     <!-- Profile card -->
-    <section class="rounded-xl border border-black/5 dark:border-white/10 bg-paper-raised dark:bg-paper-raised-dark p-6">
+    <section class="rounded-xl border border-black/5 dark:border-white/10 bg-paper-raised dark:bg-paper-raised-dark p-6" :class="!isAuthenticated ? 'opacity-90' : ''">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-lg font-semibold">{{ user?.name || user?.email || 'Account' }}</h2>
-          <p class="text-sm text-slate dark:text-slate-dark">{{ user?.email }}</p>
+          <h2 class="text-lg font-semibold">{{ displayUser?.name || displayUser?.email || 'Account' }}</h2>
+          <p class="text-sm text-slate dark:text-slate-dark">{{ displayUser?.email }}</p>
         </div>
-        <button @click="doLogout" class="text-xs px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+        <button v-if="isAuthenticated" @click="doLogout" class="text-xs px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
           Sign out
         </button>
       </div>
 
       <div class="grid grid-cols-3 gap-4 mt-6">
         <div class="rounded-lg bg-teal-soft/60 dark:bg-teal-soft-dark/60 p-3 text-center">
-          <p class="text-lg font-bold text-teal dark:text-teal-dark">{{ user?.credit_balance ?? 0 }}</p>
+          <p class="text-lg font-bold text-teal dark:text-teal-dark">{{ displayUser?.credit_balance ?? 0 }}</p>
           <p class="text-[11px] text-slate dark:text-slate-dark">Credits</p>
         </div>
         <div class="rounded-lg bg-black/5 dark:bg-white/5 p-3 text-center">
-          <p class="text-lg font-bold">{{ user?.subscription_active ? 'Active' : 'None' }}</p>
+          <p class="text-lg font-bold">{{ displayUser?.subscription_active ? 'Active' : 'None' }}</p>
           <p class="text-[11px] text-slate dark:text-slate-dark">Subscription</p>
         </div>
         <div class="rounded-lg bg-black/5 dark:bg-white/5 p-3 text-center">
-          <p class="text-lg font-bold capitalize">{{ user?.role ?? '—' }}</p>
+          <p class="text-lg font-bold capitalize">{{ displayUser?.role ?? '—' }}</p>
           <p class="text-[11px] text-slate dark:text-slate-dark">Role</p>
         </div>
       </div>
     </section>
 
     <!-- API Keys -->
-    <section class="rounded-xl border border-black/5 dark:border-white/10 bg-paper-raised dark:bg-paper-raised-dark p-6">
-      <h3 class="text-sm font-semibold mb-4">API Keys</h3>
+    <section class="rounded-xl border border-black/5 dark:border-white/10 bg-paper-raised dark:bg-paper-raised-dark p-6" :class="!isAuthenticated ? 'opacity-90' : ''">
+      <div class="flex items-center gap-2 mb-4">
+        <h3 class="text-sm font-semibold">API Keys</h3>
+        <span v-if="!isAuthenticated" class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 text-slate dark:text-slate-dark">Example</span>
+      </div>
       <p class="text-xs text-slate dark:text-slate-dark mb-4">
         Use API keys to access the PolicyIQ comparison API programmatically.
         Each head-to-head comparison costs 1 credit.
@@ -142,7 +179,7 @@ onMounted(() => {
           :disabled="loading"
           class="px-4 py-2 rounded-lg bg-teal dark:bg-teal-dark text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 cursor-pointer"
         >
-          {{ loading ? '…' : 'Create' }}
+          {{ loading ? '…' : isAuthenticated ? 'Create' : 'Sign in to create' }}
         </button>
       </div>
 
@@ -151,7 +188,7 @@ onMounted(() => {
       <!-- Key list -->
       <div class="space-y-2">
         <div
-          v-for="key in keys"
+          v-for="key in displayKeys"
           :key="key.id"
           class="flex items-center justify-between px-3 py-2.5 rounded-lg border border-black/5 dark:border-white/10"
           :class="key.revoked_at ? 'opacity-50' : ''"
@@ -172,7 +209,7 @@ onMounted(() => {
             </button>
           </div>
         </div>
-        <p v-if="keys.length === 0" class="text-xs text-slate dark:text-slate-dark py-2">No API keys yet.</p>
+        <p v-if="displayKeys.length === 0" class="text-xs text-slate dark:text-slate-dark py-2">No API keys yet.</p>
       </div>
     </section>
 
