@@ -168,7 +168,12 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
         "UniMed", "https://unimed.co.nz", ("health",),
         "Absorbed Accuro's book and brand (accuro.co.nz now redirects "
         "entirely into a UniMed portal shell) - not a separately addressable "
-        "insurer any more.",
+        "insurer any more. Originated as a union medical benefits society: "
+        "some plans (Primary Care/Primary Care Extra) are still restricted to "
+        "specific education-sector union members (NZEI, PPTA, ISEA, TIASA), "
+        "but UniMed also offers plans open to non-union members and workplace "
+        "group schemes - eligibility varies by plan, not a blanket "
+        "restriction like MAS.",
     ),
     # --- Car + pet specialists ---
     CatalogEntry(
