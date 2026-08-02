@@ -17,30 +17,42 @@ import ScoreDial from '@/components/ScoreDial.vue'
 import CriterionRow from '@/components/CriterionRow.vue'
 import { formatLabel } from '@/utils/format'
 
-type Mode = 'general' | 'life'
+// Each insurance type is its own top-level "split". `kind` selects which
+// comparison engine renders it: a fact-based policy diff (general), graded
+// scorecards (life), or a coming-soon placeholder (health - no data yet).
+type CategoryKind = 'general' | 'life' | 'health'
+interface CategoryDef {
+  value: string
+  label: string
+  kind: CategoryKind
+}
 
-const mode = ref<Mode>('general')
+const categories: CategoryDef[] = [
+  { value: 'house', label: 'Home', kind: 'general' },
+  { value: 'contents', label: 'Contents', kind: 'general' },
+  { value: 'car', label: 'Car', kind: 'general' },
+  { value: 'landlord', label: 'Landlord', kind: 'general' },
+  { value: 'boat', label: 'Boat', kind: 'general' },
+  { value: 'travel', label: 'Travel', kind: 'general' },
+  { value: 'pet', label: 'Pet', kind: 'general' },
+  { value: 'life', label: 'Life', kind: 'life' },
+  { value: 'health', label: 'Health', kind: 'health' },
+]
+
+const activeCategory = ref('house')
+const activeKind = computed(
+  () => categories.find((c) => c.value === activeCategory.value)?.kind ?? 'general'
+)
+
 const loading = ref(false)
 const error = ref<string | null>(null)
 const dataSource = ref<string | null>(null)
 
 // ---- General insurance state ----
-const generalProductType = ref('house')
 const generalResults = ref<GeneralProductProfile[]>([])
 const searchQuery = ref('')
 const activeCategories = ref<Set<FactCategory>>(new Set(['benefit', 'limit', 'exclusion']))
 const excludedInsurers = ref<Set<string>>(new Set())
-
-const generalProductTypes = [
-  { value: 'house', label: 'House' },
-  { value: 'contents', label: 'Contents' },
-  { value: 'home_contents', label: 'Home & Contents' },
-  { value: 'car', label: 'Car' },
-  { value: 'landlord', label: 'Landlord' },
-  { value: 'boat', label: 'Boat' },
-  { value: 'travel', label: 'Travel' },
-  { value: 'pet', label: 'Pet' },
-]
 
 const CATEGORY_META: Record<FactCategory, { label: string; dot: string; text: string; chip: string }> = {
   benefit: {
@@ -141,7 +153,7 @@ async function runGeneralCompare() {
   dataSource.value = null
   excludedInsurers.value = new Set()
   try {
-    const res: CompareGeneralResponse = await api.compareGeneral({ product_type: generalProductType.value })
+    const res: CompareGeneralResponse = await api.compareGeneral({ product_type: activeCategory.value })
     generalResults.value = res.results
     dataSource.value = res.data_source
   } catch (e) {
@@ -168,15 +180,12 @@ async function runLifeCompare() {
   }
 }
 
-// Auto-run the general comparison whenever the product type changes.
-watch(generalProductType, () => {
-  if (mode.value === 'general') runGeneralCompare()
-})
-watch(mode, (m) => {
-  if (m === 'general' && generalResults.value.length === 0) runGeneralCompare()
+// Auto-run the general comparison whenever a general category is selected.
+watch(activeCategory, (cat) => {
+  if (categories.find((c) => c.value === cat)?.kind === 'general') runGeneralCompare()
 })
 
-// Run the default general comparison on mount.
+// Run the default (Home) comparison on mount.
 runGeneralCompare()
 
 // ---- General derived data ----
@@ -255,27 +264,27 @@ function completenessTone(c: number): string {
 
 <template>
   <div class="space-y-6 max-w-7xl">
-    <!-- ===== Header + mode toggle ===== -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <h1 class="text-xl font-semibold tracking-tight">Compare Policies</h1>
-        <p class="text-sm text-slate dark:text-slate-dark mt-0.5">
-          Document-grounded comparison — every figure is cited to the insurer's published policy.
-        </p>
-      </div>
-      <div class="flex items-center gap-1 p-1 rounded-lg bg-black/5 dark:bg-white/5">
-        <button
-          v-for="m in (['general', 'life'] as Mode[])"
-          :key="m"
-          @click="mode = m"
-          class="px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-150 cursor-pointer"
-          :class="mode === m
-            ? 'bg-paper-raised dark:bg-paper-raised-dark shadow-sm text-ink dark:text-ink-dark'
-            : 'text-slate dark:text-slate-dark hover:text-ink dark:hover:text-ink-dark'"
-        >
-          {{ m === 'general' ? 'General Insurance' : 'Life Insurance' }}
-        </button>
-      </div>
+    <!-- ===== Header ===== -->
+    <div>
+      <h1 class="text-xl font-semibold tracking-tight">Compare Policies</h1>
+      <p class="text-sm text-slate dark:text-slate-dark mt-0.5">
+        Document-grounded comparison — every figure is cited to the insurer's published policy.
+      </p>
+    </div>
+
+    <!-- ===== Insurance type splits ===== -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        v-for="c in categories"
+        :key="c.value"
+        @click="activeCategory = c.value"
+        class="px-3.5 py-1.5 rounded-full text-sm font-medium border transition-all duration-150 cursor-pointer"
+        :class="activeCategory === c.value
+          ? 'bg-teal dark:bg-teal-dark text-white border-teal dark:border-teal-dark shadow-sm'
+          : 'border-black/10 dark:border-white/15 text-slate dark:text-slate-dark hover:border-teal/40 dark:hover:border-teal-dark/40 hover:text-ink dark:hover:text-ink-dark'"
+      >
+        {{ c.label }}
+      </button>
     </div>
 
     <!-- ===== Error ===== -->
@@ -286,22 +295,7 @@ function completenessTone(c: number): string {
     <!-- ============================================================ -->
     <!-- ===== GENERAL INSURANCE — POLICY DETAIL DIFF ===== -->
     <!-- ============================================================ -->
-    <template v-if="mode === 'general'">
-      <!-- Product type chips -->
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="pt in generalProductTypes"
-          :key="pt.value"
-          @click="generalProductType = pt.value"
-          class="px-3.5 py-1.5 rounded-full text-sm font-medium border transition-all duration-150 cursor-pointer"
-          :class="generalProductType === pt.value
-            ? 'bg-teal dark:bg-teal-dark text-white border-teal dark:border-teal-dark shadow-sm'
-            : 'border-black/10 dark:border-white/15 text-slate dark:text-slate-dark hover:border-teal/40 dark:hover:border-teal-dark/40 hover:text-ink dark:hover:text-ink-dark'"
-        >
-          {{ pt.label }}
-        </button>
-      </div>
-
+    <template v-if="activeKind === 'general'">
       <!-- Summary stats + data source -->
       <div v-if="generalResults.length > 0" class="card px-5 py-4 flex flex-wrap items-center gap-x-8 gap-y-3">
         <div>
@@ -453,15 +447,15 @@ function completenessTone(c: number): string {
 
       <!-- Empty state -->
       <div v-if="!loading && generalResults.length === 0 && dataSource !== null" class="card p-12 text-center">
-        <p class="text-sm font-medium text-slate dark:text-slate-dark">No verified extractions for this product type yet</p>
-        <p class="text-xs text-slate dark:text-slate-dark mt-1">Run the ingestion pipeline for more insurers to populate this comparison.</p>
+        <p class="text-sm font-medium text-slate dark:text-slate-dark">No verified comparisons for this category yet</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-1">We're adding more insurers and products — check back soon.</p>
       </div>
     </template>
 
     <!-- ============================================================ -->
     <!-- ===== LIFE INSURANCE — GRADED SCORECARDS ===== -->
     <!-- ============================================================ -->
-    <template v-else>
+    <template v-else-if="activeKind === 'life'">
       <!-- Filters -->
       <div class="card p-5">
         <div class="flex flex-wrap items-end gap-4">
@@ -638,7 +632,25 @@ function completenessTone(c: number): string {
       <!-- Empty -->
       <div v-if="!loading && lifeResults.length === 0 && dataSource !== null" class="card p-12 text-center">
         <p class="text-sm font-medium text-slate dark:text-slate-dark">No graded policies for these filters</p>
-        <p class="text-xs text-slate dark:text-slate-dark mt-1">The database may not yet contain verified extractions for this product type.</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-1">We're still analysing policies for this product type — check back soon.</p>
+      </div>
+    </template>
+
+    <!-- ============================================================ -->
+    <!-- ===== HEALTH — COMING SOON ===== -->
+    <!-- ============================================================ -->
+    <template v-else>
+      <div class="card p-12 text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-teal-soft dark:bg-teal-soft-dark text-teal dark:text-teal-dark mb-4">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </div>
+        <p class="text-sm font-semibold">Health insurance comparisons are coming soon</p>
+        <p class="text-xs text-slate dark:text-slate-dark mt-1.5 max-w-md mx-auto leading-relaxed">
+          We're working through health insurers' policy documents so every comparison is grounded
+          in their published terms. Check back soon.
+        </p>
       </div>
     </template>
 
