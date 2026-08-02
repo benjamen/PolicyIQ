@@ -49,6 +49,14 @@ def list_pipeline_runs(
                 except (json.JSONDecodeError, TypeError):
                     pass
 
+            def _iso(val):
+                """SQLite returns datetimes as strings via text() - handle both."""
+                if val is None:
+                    return None
+                if hasattr(val, "isoformat"):
+                    return val.isoformat()
+                return str(val)
+
             runs.append(
                 PipelineRunOut(
                     id=str(row[0]),
@@ -56,8 +64,8 @@ def list_pipeline_runs(
                     insurer_id=str(row[2]) if row[2] else None,
                     insurer_name=row[3],
                     status=row[4],
-                    started_at=row[5].isoformat() if row[5] else None,
-                    completed_at=row[6].isoformat() if row[6] else None,
+                    started_at=_iso(row[5]),
+                    completed_at=_iso(row[6]),
                     documents_found=stats.get("documents_found", 0),
                     documents_new=stats.get("documents_new", 0),
                     extractions_ok=stats.get("extractions_ok", 0),

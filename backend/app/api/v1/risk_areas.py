@@ -17,6 +17,7 @@ from app.domain.risk_area_taxonomy import (
     get_top_level_areas,
 )
 from app.schemas.risk_areas import (
+    CoverageByInsurer,
     RiskAreaListResponse,
     RiskAreaOut,
     RiskAreaTreeOut,
@@ -62,27 +63,53 @@ def list_risk_events(
 ) -> RiskEventListResponse:
     """Return risk events, optionally filtered by area_code.
 
-    Risk events are populated by the coverage-matrix pipeline stage.
+    Risk events are per-policy-version coverage facts (covered/excluded/
+    limited/sub_limited) populated by the coverage-matrix pipeline stage.
     If the risk_event table doesn't exist yet (migration not applied),
     returns an empty list - fail-closed."""
     try:
-        query = "SELECT id, area_code, name, description FROM risk_event"
+        query = (
+            "SELECT re.id, ra.code, re.name, re.detail, re.coverage_status, "
+            "i.name AS insurer_name "
+            "FROM risk_event re "
+            "JOIN risk_area ra ON re.risk_area_id = ra.id "
+            "JOIN policy_version pv ON re.policy_version_id = pv.id "
+            "LEFT JOIN insurer i ON pv.insurer_id = i.id "
+        )
         params: dict = {}
         if area_code:
-            query += " WHERE area_code = :area_code"
+            query += "WHERE ra.code = :area_code "
             params["area_code"] = area_code
-        query += " ORDER BY area_code, name"
+        query += "ORDER BY ra.code, re.name"
 
         rows = session.execute(text(query), params).fetchall()
+
+        # Group by (area_code, name) -> aggregate coverage across insurers
+        grouped: dict[tuple[str, str], dict] = {}
+        for row in rows:
+            key = (row[1], row[2])
+            if key not in grouped:
+                grouped[key] = {
+                    "id": str(row[0]),
+                    "area_code": row[1],
+                    "name": row[2],
+                    "description": row[3],
+                    "coverage": [],
+                }
+            if row[5]:  # insurer_name
+                grouped[key]["coverage"].append(
+                    {"insurer": row[5], "status": row[4]}
+                )
+
         events = [
             RiskEventOut(
-                id=str(row[0]),
-                area_code=row[1],
-                name=row[2],
-                description=row[3],
-                coverage=[],  # Coverage matrix join deferred to Phase C
+                id=e["id"],
+                area_code=e["area_code"],
+                name=e["name"],
+                description=e["description"],
+                coverage=[CoverageByInsurer(**c) for c in e["coverage"]],
             )
-            for row in rows
+            for e in grouped.values()
         ]
     except Exception:
         # Table doesn't exist yet (migration not applied) - fail closed
