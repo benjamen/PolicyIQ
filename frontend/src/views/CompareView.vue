@@ -18,9 +18,11 @@ import CriterionRow from '@/components/CriterionRow.vue'
 import { formatLabel } from '@/utils/format'
 
 // Each insurance type is its own top-level "split". `kind` selects which
-// comparison engine renders it: a fact-based policy diff (general), graded
-// scorecards (life), or a coming-soon placeholder (health - no data yet).
-type CategoryKind = 'general' | 'life' | 'health'
+// comparison engine renders it: a fact-based policy diff (general) or graded
+// scorecards (life). Health uses the general fact-diff too - it shows real
+// data once health policies are ingested, and a "check back soon" empty
+// state until then.
+type CategoryKind = 'general' | 'life'
 interface CategoryDef {
   value: string
   label: string
@@ -36,7 +38,7 @@ const categories: CategoryDef[] = [
   { value: 'travel', label: 'Travel', kind: 'general' },
   { value: 'pet', label: 'Pet', kind: 'general' },
   { value: 'life', label: 'Life', kind: 'life' },
-  { value: 'health', label: 'Health', kind: 'health' },
+  { value: 'health', label: 'Health', kind: 'general' },
 ]
 
 const activeCategory = ref('house')
@@ -455,7 +457,7 @@ function completenessTone(c: number): string {
     <!-- ============================================================ -->
     <!-- ===== LIFE INSURANCE — GRADED SCORECARDS ===== -->
     <!-- ============================================================ -->
-    <template v-else-if="activeKind === 'life'">
+    <template v-else>
       <!-- Filters -->
       <div class="card p-5">
         <div class="flex flex-wrap items-end gap-4">
@@ -633,24 +635,6 @@ function completenessTone(c: number): string {
       <div v-if="!loading && lifeResults.length === 0 && dataSource !== null" class="card p-12 text-center">
         <p class="text-sm font-medium text-slate dark:text-slate-dark">No graded policies for these filters</p>
         <p class="text-xs text-slate dark:text-slate-dark mt-1">We're still analysing policies for this product type — check back soon.</p>
-      </div>
-    </template>
-
-    <!-- ============================================================ -->
-    <!-- ===== HEALTH — COMING SOON ===== -->
-    <!-- ============================================================ -->
-    <template v-else>
-      <div class="card p-12 text-center">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-teal-soft dark:bg-teal-soft-dark text-teal dark:text-teal-dark mb-4">
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-        </div>
-        <p class="text-sm font-semibold">Health insurance comparisons are coming soon</p>
-        <p class="text-xs text-slate dark:text-slate-dark mt-1.5 max-w-md mx-auto leading-relaxed">
-          We're working through health insurers' policy documents so every comparison is grounded
-          in their published terms. Check back soon.
-        </p>
       </div>
     </template>
 
