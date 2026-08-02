@@ -16,6 +16,12 @@ export const router = createRouter({
       meta: { title: 'Compare', subtitle: 'Scored, cited, line by line' },
     },
     {
+      path: '/report',
+      name: 'report',
+      component: () => import('@/views/ReportView.vue'),
+      meta: { title: 'Report', subtitle: 'Head-to-head comparison' },
+    },
+    {
       path: '/risk-explorer',
       name: 'risk-explorer',
       component: () => import('@/views/RiskExplorerView.vue'),

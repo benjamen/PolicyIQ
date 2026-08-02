@@ -148,6 +148,42 @@ function openSource(source: SourceRef) {
   drawerSource.value = source
 }
 
+// ---- Head-to-head report selection ----
+// Pick exactly two insurers to generate a focused, shareable report from
+// (see ReportView.vue) - reuses whichever compare results are already
+// loaded, no separate fetch.
+const reportSelection = ref<string[]>([])
+function toggleReportSelection(id: string) {
+  const idx = reportSelection.value.indexOf(id)
+  if (idx !== -1) {
+    reportSelection.value = reportSelection.value.filter((x) => x !== id)
+  } else if (reportSelection.value.length < 2) {
+    reportSelection.value = [...reportSelection.value, id]
+  } else {
+    // Replace the oldest pick so it's never stuck at "2 selected, can't pick a third"
+    reportSelection.value = [reportSelection.value[1], id]
+  }
+}
+const reportLink = computed(() => {
+  if (reportSelection.value.length !== 2) return null
+  const [a, b] = reportSelection.value
+  // For general categories activeCategory.value IS the product_type
+  // ("house", "car", ...). For life, activeCategory.value is just the tab
+  // key ("life") - the real product_type filter lives in lifeFilters
+  // (e.g. "life_cover", "tpd") and must be used instead.
+  const productType = activeKind.value === 'life' ? lifeFilters.value.product_type : activeCategory.value
+  const query: Record<string, string> = { kind: activeKind.value, type: productType, a, b }
+  if (activeKind.value === 'life') {
+    query.age = String(lifeFilters.value.age)
+    query.smoker = lifeFilters.value.smoker_status
+    query.occupation = lifeFilters.value.occupation_category
+  }
+  return { path: '/report', query }
+})
+// Reset selection when switching category/kind - a report only makes sense
+// within one product type.
+watch(activeCategory, () => { reportSelection.value = [] })
+
 // ---- Data fetching ----
 async function runGeneralCompare() {
   loading.value = true
@@ -373,16 +409,31 @@ function completenessTone(c: number): string {
                 <h3 class="font-semibold text-sm truncate" :title="profile.insurer">{{ profile.insurer }}</h3>
                 <p class="text-[11px] text-slate dark:text-slate-dark truncate mt-0.5">{{ profile.product_name }}</p>
               </div>
-              <button
-                type="button"
-                class="shrink-0 p-1 rounded text-slate dark:text-slate-dark hover:text-brick dark:hover:text-brick-dark hover:bg-brick-soft dark:hover:bg-brick-soft/20 transition-colors cursor-pointer"
-                title="Hide this insurer"
-                @click="toggleInsurer(profile.policy_version_id)"
-              >
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              </button>
+              <div class="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  class="p-1 rounded transition-colors cursor-pointer"
+                  :class="reportSelection.includes(profile.policy_version_id)
+                    ? 'text-teal dark:text-teal-dark bg-teal-soft dark:bg-teal-soft-dark'
+                    : 'text-slate dark:text-slate-dark hover:text-teal dark:hover:text-teal-dark hover:bg-teal-soft dark:hover:bg-teal-soft-dark'"
+                  :title="reportSelection.includes(profile.policy_version_id) ? 'Selected for report' : 'Select for head-to-head report'"
+                  @click="toggleReportSelection(profile.policy_version_id)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="p-1 rounded text-slate dark:text-slate-dark hover:text-brick dark:hover:text-brick-dark hover:bg-brick-soft dark:hover:bg-brick-soft/20 transition-colors cursor-pointer"
+                  title="Hide this insurer"
+                  @click="toggleInsurer(profile.policy_version_id)"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="flex items-center gap-1.5 mt-2.5">
               <span
@@ -571,6 +622,19 @@ function completenessTone(c: number): string {
                   <h3 class="font-semibold text-base">{{ report.insurer }}</h3>
                   <span class="text-xs text-slate dark:text-slate-dark">{{ report.product_name }}</span>
                   <span v-if="!report.eligible" class="badge-excluded">Ineligible</span>
+                  <button
+                    type="button"
+                    class="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer"
+                    :class="reportSelection.includes(report.policy_version_id)
+                      ? 'text-teal dark:text-teal-dark bg-teal-soft dark:bg-teal-soft-dark'
+                      : 'text-slate dark:text-slate-dark bg-black/5 dark:bg-white/5 hover:text-teal dark:hover:text-teal-dark'"
+                    @click="toggleReportSelection(report.policy_version_id)"
+                  >
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    {{ reportSelection.includes(report.policy_version_id) ? 'Selected for report' : 'Select for report' }}
+                  </button>
                 </div>
                 <p v-if="!report.eligible" class="text-xs text-brick dark:text-brick-dark mt-1">{{ report.ineligibility_reason }}</p>
 
@@ -638,7 +702,41 @@ function completenessTone(c: number): string {
       </div>
     </template>
 
+    <!-- ===== Head-to-head report picker bar ===== -->
+    <Transition name="reportbar">
+      <div
+        v-if="reportSelection.length > 0"
+        class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 card px-4 py-2.5 flex items-center gap-3 shadow-lg"
+      >
+        <span class="text-xs text-slate dark:text-slate-dark">
+          {{ reportSelection.length }} of 2 selected for report
+        </span>
+        <router-link
+          v-if="reportLink"
+          :to="reportLink"
+          class="btn-primary text-xs"
+        >
+          Generate head-to-head report →
+        </router-link>
+        <button @click="reportSelection = []" class="text-xs text-slate dark:text-slate-dark hover:text-ink dark:hover:text-ink-dark cursor-pointer">
+          Clear
+        </button>
+      </div>
+    </Transition>
+
     <!-- ===== Citation source drawer ===== -->
     <SourceDrawer :source="drawerSource" @close="drawerSource = null" />
   </div>
 </template>
+
+<style scoped>
+.reportbar-enter-active,
+.reportbar-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.reportbar-enter-from,
+.reportbar-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+}
+</style>

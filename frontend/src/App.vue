@@ -28,9 +28,9 @@ const themeIcon = {
 </script>
 
 <template>
-  <div class="flex h-dvh overflow-hidden">
+  <div class="flex h-dvh overflow-hidden print:h-auto print:overflow-visible">
     <!-- Sidebar -->
-    <aside class="hidden md:flex flex-col w-56 border-r border-black/5 dark:border-white/10 bg-paper-raised dark:bg-paper-raised-dark">
+    <aside class="hidden md:flex flex-col w-56 border-r border-black/5 dark:border-white/10 bg-paper-raised dark:bg-paper-raised-dark print:hidden">
       <!-- Logo -->
       <div class="flex items-center gap-2.5 px-5 h-14 border-b border-black/5 dark:border-white/10">
         <div class="w-7 h-7 rounded-md bg-gradient-to-br from-teal to-[#084c3e] dark:from-teal-dark dark:to-[#0f5c4b] flex items-center justify-center shadow-sm">
@@ -84,7 +84,7 @@ const themeIcon = {
     <!-- Main content -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Top bar -->
-      <header class="flex items-center justify-between h-14 px-4 md:px-6 border-b border-black/5 dark:border-white/10 bg-paper-raised/80 dark:bg-paper-raised-dark/80 backdrop-blur-sm">
+      <header class="flex items-center justify-between h-14 px-4 md:px-6 border-b border-black/5 dark:border-white/10 bg-paper-raised/80 dark:bg-paper-raised-dark/80 backdrop-blur-sm print:hidden">
         <div class="flex items-center gap-3 min-w-0">
           <div class="leading-tight min-w-0">
             <h1 class="text-sm font-semibold truncate">{{ route.meta.title }}</h1>
@@ -142,7 +142,7 @@ const themeIcon = {
       </nav>
 
       <!-- Page content -->
-      <main class="flex-1 overflow-y-auto p-4 md:p-6">
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 print:overflow-visible print:p-0">
         <router-view />
       </main>
     </div>
