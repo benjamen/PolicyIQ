@@ -86,17 +86,7 @@ const themeIcon = {
       <!-- Top bar -->
       <header class="flex items-center justify-between h-14 px-4 md:px-6 border-b border-black/5 dark:border-white/10 bg-paper-raised/80 dark:bg-paper-raised-dark/80 backdrop-blur-sm">
         <div class="flex items-center gap-3 min-w-0">
-          <!-- Brand -->
-          <router-link to="/" class="flex items-center gap-2 shrink-0">
-            <div class="w-6 h-6 rounded bg-gradient-to-br from-teal to-[#084c3e] dark:from-teal-dark dark:to-[#0f5c4b] flex items-center justify-center">
-              <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <span class="font-semibold text-sm tracking-tight">PolicyIQ<span class="text-teal dark:text-teal-dark">.nz</span></span>
-          </router-link>
-          <span class="hidden sm:block h-4 w-px bg-black/10 dark:bg-white/15 shrink-0"></span>
-          <div class="hidden sm:block leading-tight min-w-0">
+          <div class="leading-tight min-w-0">
             <h1 class="text-sm font-semibold truncate">{{ route.meta.title }}</h1>
             <p v-if="route.meta.subtitle" class="text-[11px] text-slate dark:text-slate-dark truncate">{{ route.meta.subtitle }}</p>
           </div>
