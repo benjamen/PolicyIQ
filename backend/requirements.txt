@@ -22,3 +22,9 @@ httpx>=0.27
 
 # dev/test
 pytest>=8.3
+
+# auth & accounts (docs/10-AUTH-AND-ACCOUNTS.md, docs/13-COMPETITIVE-STRATEGY.md §5):
+# argon2id password hashing, JWT access tokens, email validation
+argon2-cffi>=25.1
+PyJWT>=2.9
+email-validator>=2.2

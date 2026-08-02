@@ -296,3 +296,63 @@ class GradedFact(Base):
     page: Mapped[int] = mapped_column(Integer)
     paragraph_ref: Mapped[str] = mapped_column(String(40))
     confidence: Mapped[float] = mapped_column(Float)
+
+
+# --- Accounts, API keys, and credit ledger ---------------------------------
+# Added for the monetization vertical slice (docs/13-COMPETITIVE-STRATEGY.md
+# §5) on top of the account/auth design in docs/10-AUTH-AND-ACCOUNTS.md.
+# Named-user accounts, long-lived API keys, and a per-comparison credit ledger.
+# No personal insurance information is stored (docs/13 §3): email is a login
+# identifier, not client data, and credits meter comparisons, never people.
+
+
+class User(Base):
+    """A named PolicyIQ account. Table is `app_user` (not `user`) because
+    `user` is a reserved word in Postgres. `password_hash` is null for
+    SSO-only users (docs/10 JIT-provisions them with no password)."""
+
+    __tablename__ = "app_user"
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=_uuid)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    role: Mapped[str] = mapped_column(String(20), default="consumer")  # consumer|broker|admin
+    # Monetization (docs/13 §5): subscription access is flat-rate (not metered);
+    # company/API access draws down credit_balance, one credit per comparison.
+    subscription_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    credit_balance: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ApiKey(Base):
+    """Long-lived API key (docs/10 'API keys vs. browser sessions'). Only the
+    SHA-256 hash is stored; the raw key is shown exactly once at creation and
+    can never be retrieved again. Revocation is immediate (revoked_at)."""
+
+    __tablename__ = "api_key"
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("app_user.id"), index=True)
+    label: Mapped[str] = mapped_column(String(120))
+    key_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    key_prefix: Mapped[str] = mapped_column(String(16))  # e.g. "piq_ab12cd34" for display
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class CreditLedger(Base):
+    """Append-only credit movements. `delta` is negative for deductions (one
+    per comparison generated via the API) and positive for grants/purchases.
+    The authoritative balance is recomputable from this ledger; the cached
+    `app_user.credit_balance` is kept in sync in the same transaction."""
+
+    __tablename__ = "credit_ledger"
+
+    id: Mapped[uuid.UUID] = mapped_column(GUID, primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("app_user.id"), index=True)
+    delta: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(60))  # comparison_generated|grant|purchase
+    reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

@@ -8,6 +8,9 @@ from app.api.v1.documents import router as documents_router
 from app.api.v1.insurers import router as insurers_router
 from app.api.v1.pipeline import router as pipeline_router
 from app.api.v1.risk_areas import router as risk_areas_router
+from app.api.v1.auth import router as auth_router
+from app.api.v1.api_keys import router as api_keys_router
+from app.api.v1.reports import router as reports_router
 
 app = FastAPI(
     title="PolicyIQ NZ API",
@@ -44,6 +47,9 @@ app.include_router(insurers_router, prefix="/api/v1")
 app.include_router(documents_router, prefix="/api/v1")
 app.include_router(risk_areas_router, prefix="/api/v1")
 app.include_router(pipeline_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(api_keys_router, prefix="/api/v1")
+app.include_router(reports_router, prefix="/api/v1")
 
 
 @app.get("/health")
