@@ -39,6 +39,18 @@ export const router = createRouter({
       component: () => import('@/views/AdminView.vue'),
       meta: { title: 'Pipeline Health', subtitle: 'Crawler & extraction runs' },
     },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      meta: { title: 'Sign in', subtitle: 'Access your account' },
+    },
+    {
+      path: '/account',
+      name: 'account',
+      component: () => import('@/views/AccountView.vue'),
+      meta: { title: 'Account', subtitle: 'API keys, credits & plan' },
+    },
   ],
 })
 

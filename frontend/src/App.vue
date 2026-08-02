@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { useTheme } from '@/composables/useTheme'
+import { useAuth } from '@/composables/useAuth'
 
 const route = useRoute()
 const { theme, cycle } = useTheme()
+const { isAuthenticated, user } = useAuth()
 
 const nav = [
   { path: '/', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -101,6 +103,26 @@ const themeIcon = {
         </div>
 
         <div class="flex items-center gap-2">
+          <!-- Account / Login -->
+          <router-link
+            v-if="isAuthenticated"
+            to="/account"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            title="Account"
+          >
+            <div class="w-6 h-6 rounded-full bg-teal-soft dark:bg-teal-soft-dark flex items-center justify-center">
+              <span class="text-[11px] font-bold text-teal dark:text-teal-dark">{{ (user?.name || user?.email || '?')[0].toUpperCase() }}</span>
+            </div>
+            <span class="hidden sm:block text-xs font-medium">{{ user?.credit_balance ?? 0 }} credits</span>
+          </router-link>
+          <router-link
+            v-else
+            to="/login"
+            class="px-3 py-1.5 rounded-lg bg-teal dark:bg-teal-dark text-white text-xs font-medium hover:opacity-90 transition-opacity"
+          >
+            Sign in
+          </router-link>
+
           <!-- Theme toggle -->
           <button
             @click="cycle"
