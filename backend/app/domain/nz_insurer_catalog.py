@@ -59,7 +59,12 @@ class CatalogEntry:
 NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
     # --- Life insurance ---
     CatalogEntry("AIA New Zealand", "https://www.aia.co.nz", ("life_cover", "health")),
-    CatalogEntry("Partners Life", "https://www.partnerslife.co.nz", ("life_cover",)),
+    CatalogEntry(
+        "Partners Life", "https://www.partnerslife.co.nz", ("life_cover", "health"),
+        "Also sells 'Private Medical Cover', a real distinct health product "
+        "(found 2026-08-03 - two real overview documents were already "
+        "downloaded but miscategorised under life_cover instead of health).",
+    ),
     CatalogEntry(
         "Fidelity Life", "https://www.fidelitylife.co.nz", ("life_cover",),
         "NZ's largest locally-owned life insurer; also underwrites the former "
@@ -129,12 +134,15 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
     ),
     CatalogEntry(
         "AA Insurance", "https://www.aainsurance.co.nz",
-        ("house", "contents", "car", "travel", "landlord", "business"),
+        ("house", "contents", "car", "travel", "landlord", "business", "health"),
         "Real ICNZ general-insurer member (a joint venture between Vero/"
         "Suncorp and the NZAA). Its 'Policy documents' page is a real, "
         "public, client-side-rendered documents library, not a login wall "
         "as first thought - a plain non-JS request only sees an empty "
-        "shell (fixed 2026-08-01).",
+        "shell (fixed 2026-08-01). Also sells AA Health Insurance, "
+        "underwritten by nib (confirmed 2026-08-03) - not yet ingested, "
+        "a real distinct white-label product from nib's own directly-"
+        "branded health cover, same pattern as AA Life/Asteron.",
     ),
     CatalogEntry(
         "NZI", "https://www.nzi.co.nz", ("house", "contents", "business"),
