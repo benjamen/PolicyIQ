@@ -108,6 +108,11 @@ const totalCovered = computed(() =>
             {{ formatLabel(t.product_type) }}
           </span>
         </div>
+
+        <!-- Notes (eligibility restrictions, brand relationships, sourcing caveats) -->
+        <p v-if="insurer.notes" class="text-[11px] text-slate dark:text-slate-dark leading-relaxed mt-3 pt-3 border-t border-black/5 dark:border-white/10">
+          {{ insurer.notes }}
+        </p>
       </div>
     </div>
 
