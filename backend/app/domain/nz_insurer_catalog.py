@@ -86,8 +86,12 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
     CatalogEntry(
         "MAS (Medical Assurance Society)", "https://www.mas.co.nz",
         ("life_cover", "house", "contents", "car"),
-        "Membership-based mutual for NZ professionals; sells house/contents/"
-        "car insurance directly too, not just life.",
+        "Membership-based mutual, not open to the general public - eligibility "
+        "is restricted to qualifying professionals (historically doctors, "
+        "dentists and vets; now extended to a wider range including lawyers, "
+        "engineers and accountants) and their families. Holding any MAS "
+        "product makes you a Member; sells house/contents/car insurance "
+        "directly too, not just life.",
     ),
     CatalogEntry("Pinnacle Life", "https://www.pinnaclelife.co.nz", ("life_cover",)),
     CatalogEntry(
