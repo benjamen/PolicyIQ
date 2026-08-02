@@ -121,8 +121,11 @@ NZ_INSURER_CATALOG: tuple[CatalogEntry, ...] = (
     CatalogEntry("State", "https://www.state.co.nz", ("house", "contents", "car", "business")),
     CatalogEntry(
         "FMG", "https://www.fmg.co.nz", ("house", "contents"),
-        "Rural/farm-focused mutual insurer; real household contents policy "
-        "wording linked directly on fmg.co.nz (found 2026-08-01, not yet crawled).",
+        "Rural-heritage mutual (membership is tied to holding a rural risk "
+        "policy), but unlike MAS its house/contents/car cover is open to any "
+        "NZ resident, not just rural or farming customers - real household "
+        "contents policy wording linked directly on fmg.co.nz (found "
+        "2026-08-01, not yet crawled).",
     ),
     CatalogEntry(
         "AA Insurance", "https://www.aainsurance.co.nz",
