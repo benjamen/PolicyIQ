@@ -1,0 +1,70 @@
+name: Deploy frontend to GitHub Pages
+
+# Publishes the real Vue app (frontend/dist) to GitHub Pages at policyiq.nz,
+# replacing the old static design mockup that deploy-pages.yml used to ship.
+# The backend API it calls lives at https://api.policyiq.nz (baked in at build
+# time from frontend/.env.production - see docs/06-DEPLOYMENT-PLAN.md).
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+      - ".github/workflows/deploy-frontend.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      # GitHub Pages has no server-side routing, so a hard refresh on a deep
+      # link like /compare would 404. Shipping the app shell as 404.html lets
+      # vue-router (history mode) read the URL path and render the right view.
+      - name: Add SPA fallback
+        working-directory: frontend
+        run: cp dist/index.html dist/404.html
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          # Pages is already enabled for this repo; enablement:true is idempotent
+          # and keeps this workflow self-sufficient if run on a fresh fork.
+          enablement: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

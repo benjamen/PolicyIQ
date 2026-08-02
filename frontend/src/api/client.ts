@@ -11,7 +11,10 @@ import type {
   SectionText,
 } from './types'
 
-const BASE = '/api/v1'
+// In dev this is relative and hits the Vite proxy (/api -> localhost:8001).
+// In the production static build (GitHub Pages) there is no proxy, so the build
+// bakes in the absolute backend URL via VITE_API_BASE_URL (see .env.production).
+const BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
