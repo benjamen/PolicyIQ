@@ -194,6 +194,35 @@ const reportLink = computed(() => {
 // within one product type.
 watch(activeCategory, () => { reportSelection.value = [] })
 
+// Pairing hint: flag when either of the 2 selected products has sparse
+// extracted data, before the user generates a report and hits a wall of
+// "not extracted" fields - cheaper than fixing the underlying extraction
+// gap, and still useful once that gap is smaller since coverage will
+// never be perfectly even across every product.
+const LOW_COMPLETENESS_THRESHOLD = 0.5
+const sparseSelectionWarning = computed(() => {
+  if (reportSelection.value.length !== 2) return null
+  const sparseNames: string[] = []
+  for (const id of reportSelection.value) {
+    if (activeKind.value === 'life') {
+      const report = lifeResults.value.find((r) => r.policy_version_id === id)
+      if (report && report.data_completeness < LOW_COMPLETENESS_THRESHOLD) {
+        sparseNames.push(`${report.insurer} ${productDisplayName(report.product_name)}`)
+      }
+    } else {
+      const profile = generalResults.value.find((p) => p.policy_version_id === id)
+      if (profile && generalCompleteness(profile) < LOW_COMPLETENESS_THRESHOLD) {
+        // Unsplit General profiles all share the product_type placeholder
+        // as product_name (e.g. "pet") - insurer name is what actually
+        // disambiguates them until they're split into real named products.
+        sparseNames.push(profile.insurer)
+      }
+    }
+  }
+  if (sparseNames.length === 0) return null
+  return `${sparseNames.join(' and ')} ${sparseNames.length === 1 ? 'has' : 'have'} limited extracted data - expect some "not extracted" fields in this report.`
+})
+
 // ---- Data fetching ----
 async function runGeneralCompare() {
   loading.value = true
@@ -256,6 +285,16 @@ function profileStats(p: GeneralProductProfile) {
     limit: p.facts.filter((f) => f.category === 'limit').length,
     exclusion: p.facts.filter((f) => f.category === 'exclusion').length,
   }
+}
+
+// General profiles have no server-computed completeness score (unlike
+// GradeReport.data_completeness) - approximate one client-side from raw
+// fact count so sparse products can be flagged the same way life products
+// already are. 8 facts across benefit/limit/exclusion is treated as "full"
+// - a rough calibration against typically-complete profiles in this
+// dataset, not a precise measure.
+function generalCompleteness(p: GeneralProductProfile): number {
+  return Math.min(1, p.facts.length / 8)
 }
 
 function matchesSearch(f: GeneralInsuranceFact): boolean {
@@ -463,7 +502,7 @@ function productDisplayName(productName: string): string {
                 </button>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 mt-2.5">
+            <div class="flex items-center gap-1.5 mt-2.5 flex-wrap">
               <span
                 v-for="cat in CATEGORY_ORDER"
                 :key="cat"
@@ -471,6 +510,13 @@ function productDisplayName(productName: string): string {
                 :class="CATEGORY_META[cat].chip"
               >
                 {{ profileStats(profile)[cat] }} {{ CATEGORY_META[cat].label.toLowerCase() }}
+              </span>
+              <span
+                v-if="generalCompleteness(profile) < LOW_COMPLETENESS_THRESHOLD"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-soft dark:bg-amber-soft/20 text-amber dark:text-amber-dark"
+                title="Few facts extracted for this product yet - comparisons may show 'not extracted' fields"
+              >
+                Sparse data
               </span>
             </div>
           </div>
@@ -734,21 +780,29 @@ function productDisplayName(productName: string): string {
     <Transition name="reportbar">
       <div
         v-if="reportSelection.length > 0"
-        class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 card px-4 py-2.5 flex items-center gap-3 shadow-lg"
+        class="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 card px-4 py-2.5 shadow-lg max-w-lg"
       >
-        <span class="text-xs text-slate dark:text-slate-dark">
-          {{ reportSelection.length }} of 2 selected for report
-        </span>
-        <router-link
-          v-if="reportLink"
-          :to="reportLink"
-          class="btn-primary text-xs"
-        >
-          Generate head-to-head report →
-        </router-link>
-        <button @click="reportSelection = []" class="text-xs text-slate dark:text-slate-dark hover:text-ink dark:hover:text-ink-dark cursor-pointer">
-          Clear
-        </button>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-slate dark:text-slate-dark shrink-0">
+            {{ reportSelection.length }} of 2 selected for report
+          </span>
+          <router-link
+            v-if="reportLink"
+            :to="reportLink"
+            class="btn-primary text-xs shrink-0"
+          >
+            Generate head-to-head report →
+          </router-link>
+          <button @click="reportSelection = []" class="text-xs text-slate dark:text-slate-dark hover:text-ink dark:hover:text-ink-dark cursor-pointer shrink-0">
+            Clear
+          </button>
+        </div>
+        <p v-if="sparseSelectionWarning" class="flex items-start gap-1.5 text-[11px] text-amber dark:text-amber-dark mt-1.5 pt-1.5 border-t border-black/5 dark:border-white/10">
+          <svg class="w-3.5 h-3.5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          {{ sparseSelectionWarning }}
+        </p>
       </div>
     </Transition>
 
